@@ -1,0 +1,99 @@
+version: "3.7"
+
+services:
+  memcache:
+    image: memcached
+    deploy:
+      replicas: 1
+
+  db-storage:
+    image: postgres:11
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
+      POSTGRES_USER: swh
+    volumes:
+      - "storage:/var/lib/postgresql/data"
+    secrets:
+      - source: postgres-password
+        uid: '999'
+        mode: 0400
+
+  web:
+    image: softwareheritage/web:latest
+    configs:
+      - source: web
+        target: /etc/softwareheritage/config.yml
+    command:
+      - serve
+    environment:
+      PORT: "5004"
+    depends_on:
+      - memcache
+
+  objstorage:
+    image: softwareheritage/base:latest
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+    volumes:
+      - "objstorage:/srv/softwareheritage/objects"
+    configs:
+      - source: objstorage
+        target: /etc/softwareheritage/config.yml
+    environment:
+      PORT: "5003"
+    command:
+      - objstorage
+
+  storage:
+    image: softwareheritage/base:latest
+    configs:
+      - source: storage
+        target: /etc/softwareheritage/config.yml
+    environment:
+      PGHOST: db-storage
+      PORT: "5002"
+    command:
+      - storage
+    depends_on:
+      - db-storage
+    secrets:
+      - source: postgres-password
+        mode: 0400
+
+  nginx:
+    image: nginx
+    configs:
+      - source: nginx
+        target: /etc/nginx/nginx.conf
+    ports:
+      - "5080:80"
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+
+volumes:
+  objstorage:
+  storage:
+
+secrets:
+  postgres-password:
+    external: true
+
+configs:
+  web:
+    file: conf/web.yml
+  storage:
+    file: conf/storage.yml
+  objstorage:
+    file: conf/objstorage.yml
+  nginx:
+    file: conf/nginx.conf

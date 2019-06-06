@@ -1,0 +1,15 @@
+storage:
+  cls: remote
+  args:
+    url: http://storage:5002/
+    max_retries: 5
+    pool_connections: 100
+    pool_maxsize: 200
+
+journal:
+  brokers:
+    - kafka1
+    - kafka2
+    - kafka3
+  group_id: test-graph-replayer-x-change-me
+  max_poll_records: 1000

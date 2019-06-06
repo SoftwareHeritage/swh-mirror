@@ -1,0 +1,35 @@
+# Mirror specific services
+version: '3.7'
+
+services:
+  graph-replayer:
+    image: softwareheritage/base:latest
+    configs:
+      - source: graph-replayer
+        target: /etc/softwareheritage/config.yml
+    command:
+      - graph-replayer
+
+  content-replayer:
+    image: softwareheritage/base:latest
+    configs:
+      - source: content-replayer
+        target: /etc/softwareheritage/config.yml
+    command:
+      - content-replayer
+
+  graph-replayer-origin_visit:
+    image: softwareheritage/base:latest
+    configs:
+      - source: graph-replayer-origin_visit
+        target: /etc/softwareheritage/config.yml
+    command:
+      - graph-replayer
+
+configs:
+  graph-replayer:
+    file: conf/graph-replayer.yml
+  graph-replayer-origin_visit:
+    file: conf/graph-replayer-origin_visit.yml
+  content-replayer:
+    file: conf/content-replayer.yml

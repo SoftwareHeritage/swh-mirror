@@ -1,0 +1,20 @@
+objstorage_src:
+  cls: remote
+  args:
+    url: http://storage0.euwest.azure.internal.softwareheritage.org:5003
+    max_retries: 5
+    pool_connections: 100
+    pool_maxsize: 200
+
+objstorage_dst:
+  cls: remote
+  args:
+    url: http://objstorage:5303
+
+journal:
+  brokers:
+    - kafka1
+    - kafka2
+    - kafka3
+  group_id: test-content-replayer-x-change-me
+  max_poll_records: 1000
