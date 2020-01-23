@@ -2,34 +2,69 @@
 version: '3.7'
 
 services:
-  graph-replayer:
+  graph-replayer-content:
     image: softwareheritage/base:latest
+    environment:
+      STATSD_HOST: prometheus-statsd-exporter
+      STATSD_PORT: 9125
     configs:
-      - source: graph-replayer
+      - source: graph-replayer-content
+        target: /etc/softwareheritage/config.yml
+    command:
+      - graph-replayer
+
+  graph-replayer-directory:
+    image: softwareheritage/base:latest
+    environment:
+      STATSD_HOST: prometheus-statsd-exporter
+      STATSD_PORT: 9125
+    configs:
+      - source: graph-replayer-directory
+        target: /etc/softwareheritage/config.yml
+    command:
+      - graph-replayer
+
+  graph-replayer-revision:
+    image: softwareheritage/base:latest
+    environment:
+      STATSD_HOST: prometheus-statsd-exporter
+      STATSD_PORT: 9125
+    configs:
+      - source: graph-replayer-revision
+        target: /etc/softwareheritage/config.yml
+    command:
+      - graph-replayer
+
+  graph-replayer-origin:
+    image: softwareheritage/base:latest
+    environment:
+      STATSD_HOST: prometheus-statsd-exporter
+      STATSD_PORT: 9125
+    configs:
+      - source: graph-replayer-origin
         target: /etc/softwareheritage/config.yml
     command:
       - graph-replayer
 
   content-replayer:
     image: softwareheritage/base:latest
+    environment:
+      STATSD_HOST: prometheus-statsd-exporter
+      STATSD_PORT: 9125
     configs:
       - source: content-replayer
         target: /etc/softwareheritage/config.yml
     command:
       - content-replayer
 
-  graph-replayer-origin_visit:
-    image: softwareheritage/base:latest
-    configs:
-      - source: graph-replayer-origin_visit
-        target: /etc/softwareheritage/config.yml
-    command:
-      - graph-replayer
-
 configs:
-  graph-replayer:
-    file: conf/graph-replayer.yml
-  graph-replayer-origin_visit:
-    file: conf/graph-replayer-origin_visit.yml
+  graph-replayer-directory:
+    file: conf/graph-replayer-directory.yml
+  graph-replayer-revision:
+    file: conf/graph-replayer-revision.yml
+  graph-replayer-origin:
+    file: conf/graph-replayer-origin.yml
+  graph-replayer-content:
+    file: conf/graph-replayer-content.yml
   content-replayer:
     file: conf/content-replayer.yml
