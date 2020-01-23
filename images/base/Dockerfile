@@ -1,5 +1,5 @@
-ARG debianversion=stretch
-FROM debian:${debianversion:-stretch}
+ARG debianversion=buster
+FROM debian:${debianversion:-buster}
 LABEL maintainer="Software Heritage <sysop@softwareheritage.org>"
 ENV PROJECT_NAME swh-base
 
@@ -27,10 +27,12 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     -t $(lsb_release -sc)-backports \
 	postgresql-client \
 	gunicorn3 \
+	python3-dulwich \
     python3-swh.objstorage \
     python3-swh.scheduler \
     python3-swh.storage \
     python3-swh.journal \
+	wait-for-it \
 	&& \
   apt-get clean && \
   rm -rf /var/lib/apt/lists/*
@@ -38,6 +40,8 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
 
 COPY conf/logconfig.ini /etc/gunicorn/logconfig.ini
 COPY conf/gunicorn.cfg /etc/gunicorn/swh.cfg
+COPY tools/*.sh /srv/softwareheritage/utils/
+RUN chmod +x /srv/softwareheritage/utils/*.sh
 
 COPY base/entrypoint.sh /
 ENTRYPOINT ["/entrypoint.sh"]

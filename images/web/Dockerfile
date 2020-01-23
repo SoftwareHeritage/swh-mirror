@@ -1,5 +1,5 @@
-ARG debianversion=stretch
-FROM debian:${debianversion:-stretch}
+ARG debianversion=buster
+FROM debian:${debianversion:-buster}
 LABEL maintainer="Software Heritage <sysop@softwareheritage.org>"
 ENV PROJECT_NAME swh-web
 
