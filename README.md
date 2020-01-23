@@ -1,6 +1,7 @@
 # Deploy a Software Heritage stack with docker deploy
 
-According you have a properly set up docker swarm cluster, e.g.:
+According you have a properly set up docker swarm cluster with support for the
+`docker deploy` command, e.g.:
 
 ```
 ~/swh-docker$ docker node ls
@@ -8,6 +9,10 @@ ID                            HOSTNAME            STATUS              AVAILABILI
 py47518uzdb94y2sb5yjurj22     host2               Ready               Active                                  18.09.7
 n9mfw08gys0dmvg5j2bb4j2m7 *   host1               Ready               Active              Leader              18.09.7
 ```
+
+Note: this might require you activate experimental features of docker as
+described in [docker deploy](https://docs.docker.com/engine/reference/commandline/deploy/)
+documentation.
 
 In the following how-to, we will assume that the service `STACK` name is `swh`
 (this name is the last argument of the `docker deploy` command below).
@@ -44,7 +49,7 @@ device as volume proviver for docker.
 Note that the provided `docker-compose.yaml` file have a few placement
 constraints, for example the `objstorage` service is forced to be spawn on the
 master node of the docker swarm cluster. Feel free to remove/amend these
-contraints if needed.
+constraints if needed.
 
 ## Managing secrets
 
@@ -96,7 +101,7 @@ This will start a series of containers with:
 
 When you modify a configuration file exposed to docker services via the `docker
 config` system, you need to destroy the old config before being able to
-recreate them (docker is currenlty not capable of updating an existing config.
+recreate them (docker is currently not capable of updating an existing config.
 Unfortunately that also means you need to recreate every docker container using
 this config.
 
@@ -117,11 +122,28 @@ Updating service swh_web (id: 7sm6g5ecff1979t0jd3dmsvwz)
 Updating service swh_objstorage (id: 3okk2njpbopxso3n3w44ydyf9)
 ```
 
+## Updating a service
+
+When a new version of the softwareheritage/base image is published, running
+services must updated to use it.
+
+In order to prevent inconsistency caveats due to dependency in deployed
+versions, we recommend that you shut the tail services off (especially the
+replayer services in case of a mirror stack).
+
+This can be done as follow:
+
+```
+docker service update --image \
+    $(docker inspect -f '{{index .RepoDigests 0}}' \
+	  softwareheritage/base:latest ) \
+	swh_graph-replayer-origin
+```
 
 # Set up a mirror
 
 A Software Heritage mirror consists in base Software Heritage services, as
-descibed above without any worker related to web scraping nor source code
+described above without any worker related to web scraping nor source code
 repository loading. Instead, filling local storage and objstorage is the
 responsibility of kafka based `replayer` services:
 
