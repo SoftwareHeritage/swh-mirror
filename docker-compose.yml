@@ -49,6 +49,8 @@ services:
         target: /etc/softwareheritage/config.yml
     environment:
       PORT: "5003"
+      STATSD_HOST: prometheus-statsd-exporter
+      STATSD_PORT: 9125
     command:
       - objstorage
 
@@ -60,6 +62,8 @@ services:
     environment:
       PGHOST: db-storage
       PORT: "5002"
+      STATSD_HOST: prometheus-statsd-exporter
+      STATSD_PORT: 9125
     command:
       - storage
     depends_on:
@@ -79,6 +83,34 @@ services:
       placement:
         constraints:
           - node.role == manager
+
+  prometheus:
+    image: prom/prometheus
+    depends_on:
+    - prometheus-statsd-exporter
+    command:
+      # Needed for the reverse-proxy
+      - "--web.external-url=/prometheus"
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    volumes:
+      - "./conf/prometheus.yml:/etc/prometheus/prometheus.yml:ro"
+
+  prometheus-statsd-exporter:
+    image: prom/statsd-exporter
+    command:
+      - "--statsd.mapping-config=/etc/prometheus/statsd-mapping.yml"
+    volumes:
+      - "./conf/prometheus-statsd-mapping.yml:/etc/prometheus/statsd-mapping.yml:ro"
+
+  grafana:
+    image: grafana/grafana
+    depends_on:
+    - prometheus
+    environment:
+      GF_SERVER_ROOT_URL: http://localhost:5080/grafana
+    volumes:
+      - "./conf/grafana/provisioning:/etc/grafana/provisioning:ro"
+      - "./conf/grafana/dashboards:/var/lib/grafana/dashboards"
 
 volumes:
   objstorage:
