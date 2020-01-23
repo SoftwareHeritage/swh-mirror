@@ -9,7 +9,7 @@ objstorage_src:
 objstorage_dst:
   cls: remote
   args:
-    url: http://objstorage:5303
+    url: http://objstorage:5003
 
 journal:
   brokers:
