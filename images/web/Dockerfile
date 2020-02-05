@@ -24,7 +24,7 @@ ENV DJANGO_SETTINGS_MODULE=swh.web.settings.production
 
 RUN export DEBIAN_FRONTEND=noninteractive && \
   apt-get update && \
-  apt-get install -y \
+  apt-get install -y --no-install-recommends \
     -t $(lsb_release -sc)-backports \
 	gunicorn3 \
 	python3-magic \
