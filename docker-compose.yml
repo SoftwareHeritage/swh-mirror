@@ -79,7 +79,7 @@ services:
       - source: nginx
         target: /etc/nginx/nginx.conf
     ports:
-      - "5080:80"
+      - "5081:5081/tcp"
     deploy:
       placement:
         constraints:
@@ -108,7 +108,7 @@ services:
     depends_on:
     - prometheus
     environment:
-      GF_SERVER_ROOT_URL: http://localhost:5080/grafana
+      GF_SERVER_ROOT_URL: http://localhost:5081/grafana
     volumes:
       - "./conf/grafana/provisioning:/etc/grafana/provisioning:ro"
       - "./conf/grafana/dashboards:/var/lib/grafana/dashboards"
