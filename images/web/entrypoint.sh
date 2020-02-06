@@ -22,26 +22,29 @@ if [ -f /etc/softwareheritage/config.yml.tmpl ]; then
          /etc/softwareheritage/config.yml
 fi
 
-case "$1" in
-    "shell")
-      exec bash -i
-      ;;
+if [ "$1" = 'shell' ] ; then
+	shift
+	if (( $# == 0)); then
+		exec bash -i
+	else
+		"$@"
+	fi
+else
 
-    "serve")
-      echo "Migrating db using ${DJANGO_SETTINGS_MODULE}"
-      django-admin migrate --settings=${DJANGO_SETTINGS_MODULE}
+    echo "Migrating db using ${DJANGO_SETTINGS_MODULE}"
+    django-admin migrate --settings=${DJANGO_SETTINGS_MODULE}
 
-      echo "Creating admin user"
-      echo "$create_admin_script" | python3 -m swh.web.manage shell
+    echo "Creating admin user"
+    echo "$create_admin_script" | python3 -m swh.web.manage shell
 
-	  echo "starting the swh-web server"
-	  mkdir -p /var/run/gunicorn/swh/web
-      exec gunicorn3 \
-		   --bind 0.0.0.0:5004 \
-           --bind unix:/var/run/gunicorn/swh/web/sock \
-           --threads 2 \
-           --workers 2 \
-           --timeout 3600 \
-           'django.core.wsgi:get_wsgi_application()'
-      ;;
-esac
+	echo "starting the swh-web server"
+	mkdir -p /var/run/gunicorn/swh/web
+    exec gunicorn3 \
+		 --bind 0.0.0.0:5004 \
+         --bind unix:/var/run/gunicorn/swh/web/sock \
+         --threads 2 \
+         --workers 2 \
+         --timeout 3600 \
+         'django.core.wsgi:get_wsgi_application()'
+
+fi
