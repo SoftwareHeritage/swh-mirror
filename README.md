@@ -34,8 +34,8 @@ service you will need a storage named `<STACK>_objstorage`:
 ```
 ~/swh-docker$ docker volume create -d local \
   --opt type=none \
-  --opt device=/data/docker/swh-objstorage \
   --opt o=bind \
+  --opt device=/data/docker/swh-objstorage \
   swh_objstorage
 ```
 
@@ -101,7 +101,7 @@ This will start a series of containers with:
 
 When you modify a configuration file exposed to docker services via the `docker
 config` system, you need to destroy the old config before being able to
-recreate them (docker is currently not capable of updating an existing config.
+recreate them (docker is currently not capable of updating an existing config.)
 Unfortunately that also means you need to recreate every docker container using
 this config.
 
@@ -159,6 +159,29 @@ Ensure configuration files are properly set in `conf/graph-replayer.yml` and
 ~/swh-docker$ docker deploy -c docker-compose.yml,docker-compose-mirror.yml swh
 [...]
 ```
+You can check everything is running with:
+
+```
+~/swh-docker$ docker ls
+ID                  NAME                             MODE                REPLICAS            IMAGE                          PORTS
+88djaq3jezjm        swh_db-storage                   replicated          1/1                 postgres:11
+m66q36jb00xm        swh_grafana                      replicated          1/1                 grafana/grafana:latest
+qfsxngh4s2sv        swh_content-replayer             replicated          1/1                 softwareheritage/base:latest
+qcl0n3ngr2uv        swh_graph-replayer-content       replicated          2/2                 softwareheritage/base:latest
+f1hop14w6b9h        swh_graph-replayer-directory     replicated          4/4                 softwareheritage/base:latest
+dcpvbf7h4fja        swh_graph-replayer-origin        replicated          2/2                 softwareheritage/base:latest
+1njy5iuugmk2        swh_graph-replayer-release       replicated          2/2                 softwareheritage/base:latest
+cbe600nl9bdb        swh_graph-replayer-revision      replicated          4/4                 softwareheritage/base:latest
+5hroiithan6c        swh_graph-replayer-snapshot      replicated          2/2                 softwareheritage/base:latest
+zn8dzsron3y7        swh_memcache                     replicated          1/1                 memcached:latest
+wfbvf3yk6t41        swh_nginx                        replicated          1/1                 nginx:latest                   *:5081->5081/tcp
+thtev7o0n6th        swh_objstorage                   replicated          1/1                 softwareheritage/base:latest
+ysgdoqshgd2k        swh_prometheus                   replicated          1/1                 prom/prometheus:latest
+u2mjjl91aebz        swh_prometheus-statsd-exporter   replicated          1/1                 prom/statsd-exporter:latest
+xyf2xgt465ob        swh_storage                      replicated          1/1                 softwareheritage/base:latest
+su8eka2b5cbf        swh_web                          replicated          1/1                 softwareheritage/web:latest
+```
+
 
 If everything is OK, you should have your mirror filling. Check docker logs:
 
@@ -170,6 +193,31 @@ If everything is OK, you should have your mirror filling. Check docker logs:
 and:
 
 ```
-~/swh-docker$ docker service logs swh_graph-replayer
+~/swh-docker$ docker service logs swh_graph-replayer-directory
 [...]
 ```
+
+## Scaling up services
+
+In order to scale up a replayer service, you can use the `docker scale` command. For example:
+
+```
+~/swh-docker$ docker service scale swh_graph-replayer-directory=4
+[...]
+```
+
+will start 4 copies of the directory replayer service.
+
+Notes:
+
+- One graph replayer service requires a steady 500MB to 1GB of RAM to run, so
+  make sure you have properly sized machines for running these replayer
+  containers, and to monitor these.
+
+- The overall bandwidth of the replayer will depend heavily on the
+  `swh_storage` service, thus on the `swh_db-storage`. It will require some
+  network bandwidth for the ingress kafka payload (this can easily peak to
+  several hundreds of Mb/s). So make sure you have a correctly tuned database
+  and enough network bw.
+
+- Biggest topics are the directory, content and revision.
