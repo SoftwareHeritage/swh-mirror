@@ -37,11 +37,16 @@ debug: yes
 serve_assets: yes
 
 throttling:
-  cache_uri: memcache:11211
+  cache_uri: 127.0.0.1:11211
   scopes:
     swh_api:
       limiter_rate:
         default: 120/h
+      exempted_networks:
+        - 0.0.0.0/0
+    swh_api_origin_search:
+      limiter_rate:
+        default: 70/m
       exempted_networks:
         - 0.0.0.0/0
     swh_api_origin_visit_latest:
@@ -59,3 +64,6 @@ throttling:
         default: 120/h
       exempted_networks:
         - 0.0.0.0/0
+
+search: {}
+
