@@ -35,11 +35,11 @@ case "$1" in
       ;;
     "graph-replayer")
       echo "Starting the SWH mirror graph replayer"
-      exec sh -c "trap : TERM INT; while :; do swh --log-level ${LOG_LEVEL:-WARNING} journal replay; done"
+      exec sh -c "trap : TERM INT; while :; do swh --log-level ${LOG_LEVEL:-WARNING} storage replay; done"
       ;;
     "content-replayer")
       echo "Starting the SWH mirror content replayer"
-      exec sh -c "trap : TERM INT; while :; do swh --log-level ${LOG_LEVEL:-WARNING} journal content-replay; done"
+      exec sh -c "trap : TERM INT; while :; do swh --log-level ${LOG_LEVEL:-WARNING} objstorage replay; done"
       ;;
     "objstorage")
       echo "Starting the SWH $1 RPC server"
