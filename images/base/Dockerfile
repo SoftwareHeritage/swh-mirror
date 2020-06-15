@@ -25,10 +25,12 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
   apt-get update && \
   apt-get install -y \
     -t $(lsb_release -sc)-backports \
+        gunicorn \
 	postgresql-client \
-	gunicorn3 \
 	python3-dulwich \
     python3-swh.objstorage \
+    python3-swh.objstorage.replayer \
+    python3-swh.model \
     python3-swh.scheduler \
     python3-swh.storage \
     python3-swh.journal \
