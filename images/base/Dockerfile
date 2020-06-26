@@ -21,6 +21,7 @@ RUN mkdir -p /srv/softwareheritage/objects
 ENV SWH_CONFIG_FILENAME=/etc/softwareheritage/config.yml
 ENV LC_ALL=C.UTF-8
 
+ARG SWH_VER=unknown
 RUN export DEBIAN_FRONTEND=noninteractive && \
   apt-get update && \
   apt-get install -y \

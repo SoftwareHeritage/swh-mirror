@@ -22,6 +22,7 @@ ENV SWH_CONFIG_FILENAME=/etc/softwareheritage/config.yml
 ENV LC_ALL=C.UTF-8
 ENV DJANGO_SETTINGS_MODULE=swh.web.settings.production
 
+ARG SWH_VER=unknown
 RUN export DEBIAN_FRONTEND=noninteractive && \
   apt-get update && \
   apt-get install -y --no-install-recommends \
