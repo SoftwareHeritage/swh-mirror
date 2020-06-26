@@ -27,7 +27,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
   apt-get update && \
   apt-get install -y --no-install-recommends \
     -t $(lsb_release -sc)-backports \
-	gunicorn3 \
+	gunicorn \
 	python3-magic \
     python3-swh.web \
 	&& \
