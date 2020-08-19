@@ -66,7 +66,7 @@ For example:
 [...]
 ```
 
-## Creating the swh service
+## Creating the swh base services
 
 From within this repository, just type:
 
@@ -94,8 +94,41 @@ This will start a series of containers with:
 - a storage service using a postgresql database as backend,
 - a web app front end,
 - a memcache for the web app,
-- an nginx server serving as reverse proxy for the swh-web instances.
+- a prometheus monitoring app,
+- a prometeus-statsd exporter,
+- a grafana server,
+- an nginx server serving as reverse proxy for grafana and swh-web.
 
+using the latest published version of the docker images.
+
+
+The nginx frontend will listen on the 5081 port, so you can use:
+
+- http://localhost:5081/ to navigate your local copy of the archive,
+- http://localhost:5081/grafana/ to explore the monitoring probes
+  (log in with admin/admin).
+
+
+Note that if the 'latest' docker images work, it is highly recommended to
+explicitly specify the version of the image you want to use.
+Docker images for the Software Heritage stack are tagged with their build date:
+
+  docker images -f reference='softwareheritage/*:20*'
+  REPOSITORY              TAG                 IMAGE ID            CREATED             SIZE
+  softwareheritage/web    20200819-112604     32ab8340e368        About an hour ago   339MB
+  softwareheritage/base   20200819-112604     19fe3d7326c5        About an hour ago   242MB
+  softwareheritage/web    20200630-115021     65b1869175ab        7 weeks ago         342MB
+  softwareheritage/base   20200630-115021     3694e3fcf530        7 weeks ago         245MB
+
+To specify the tag to be used, simply set the SWH_IMAGE_TAG environment variable, like:
+
+  export SWH_IMAGE_TAG=20200819-112604
+  docker deploy -c docker-compose.yml swh
+
+Warning: make sure to have this variable properly set for any later `docker deploy`
+command you type, otherwise you running containers will be recreated using the
+':latest' image (which might **not** be the latest available version, nor
+consistent amond the docker nodes on you swarm cluster).
 
 ## Updating a configuration
 
@@ -122,28 +155,45 @@ Updating service swh_web (id: 7sm6g5ecff1979t0jd3dmsvwz)
 Updating service swh_objstorage (id: 3okk2njpbopxso3n3w44ydyf9)
 ```
 
+See https://docs.docker.com/engine/swarm/configs/ for more details on
+how to use the config system in docker swarm.
+
+Note that since persistent data (databases and objects) are stored in volumes,
+you can safely destoy and recreate any container you want, you will not loose
+any data.
+
 ## Updating a service
 
 When a new version of the softwareheritage/base image is published, running
 services must updated to use it.
 
 In order to prevent inconsistency caveats due to dependency in deployed
-versions, we recommend that you shut the tail services off (especially the
-replayer services in case of a mirror stack).
+versions, we recommend that you deploy the new image on all running
+services at once.
 
 This can be done as follow:
 
 ```
-docker service update --image \
-    $(docker inspect -f '{{index .RepoDigests 0}}' \
-	  softwareheritage/base:latest ) \
-	swh_graph-replayer-origin
+~/swh-docker$ export SWH_IMAGE_TAG=<new version>
+~/swh-docker$ docker deploy -c docker-compose.yml swh
 ```
+
+Note that this will reset the replicas config to their default values.
+
+
+If you want to update only a specific service, you can also use:
+
+```
+~/swh-docker$ docker service update --image \
+       softwareheritage/base:${SWH_IMAGE_TAG} ) \
+       swh_graph-replayer-origin
+```
+
 
 # Set up a mirror
 
 A Software Heritage mirror consists in base Software Heritage services, as
-described above without any worker related to web scraping nor source code
+described above, without any worker related to web scraping nor source code
 repository loading. Instead, filling local storage and objstorage is the
 responsibility of kafka based `replayer` services:
 
@@ -152,17 +202,46 @@ responsibility of kafka based `replayer` services:
 
 - the `content replayer` which is in charge of filling the object storage.
 
-Ensure configuration files are properly set in `conf/graph-replayer.yml` and
-`conf/content-replayer.yml`, then you can start these services with:
+Examples of docker-compose files and configuration files are provided in
+the `graph-replayer-remote-bytopic.yml` compose file for replayer services
+using configuration from yaml files in `conf/graph-replayer/remote/`.
+
+Copy these example files as plain yaml ones then modify them to replace
+the XXX merkers with proper values (also make sure the kafka server list
+is up to date.) Parameters to check/update are:
+
+- `journal_client/brokers`: list of kafka brokers.
+- `journal_client/group_id`: unique identifier for this mirroring session;
+  you can choose whatever you want, but changing this value will make kafka
+  start consuming messages from the beginning; kafka messages are dispatched
+  among consumers with the same `group_id`, so in order to distribute the
+  load among workers, they must share the same `group_id`.
+- `journal_client/sasl.username`: kafka authentication username.
+- `journal_client/sasl.password`: kafka authentication password.
 
 ```
-~/swh-docker$ docker deploy -c docker-compose.yml,docker-compose-mirror.yml swh
+~/swh-docker$ cd conf/graph-replayer/remote
+~/swh-docker/conf/graph-replayer/remote$ for i in *.example; do cp $i ${i/.example//}; done
+~/swh-docker/conf/graph-replayer/remote$ # edit .yml files
+~/swh-docker/conf/graph-replayer/remote$ cd ../../..
+~/swh-docker$
+
+```
+
+Once you have properly edited config files, you can start these services with:
+
+```
+~/swh-docker$ docker deploy \
+   -c docker-compose.yml \
+   -c graph-replayer-remote-bytopic.yml \
+   swh
 [...]
 ```
+
 You can check everything is running with:
 
 ```
-~/swh-docker$ docker ls
+~/swh-docker$ docker service ls
 ID                  NAME                             MODE                REPLICAS            IMAGE                          PORTS
 88djaq3jezjm        swh_db-storage                   replicated          1/1                 postgres:11
 m66q36jb00xm        swh_grafana                      replicated          1/1                 grafana/grafana:latest
@@ -190,10 +269,10 @@ If everything is OK, you should have your mirror filling. Check docker logs:
 [...]
 ```
 
-and:
+or:
 
 ```
-~/swh-docker$ docker service logs swh_graph-replayer-directory
+~/swh-docker$ docker service logs --tail 100 --follow swh_graph-replayer-directory
 [...]
 ```
 
