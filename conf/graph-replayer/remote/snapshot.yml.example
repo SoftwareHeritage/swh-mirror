@@ -1,0 +1,23 @@
+storage:
+  cls: remote
+  args:
+    url: http://storage:5002/
+    pool_connections: 100
+    pool_maxsize: 200
+
+journal_client:
+  cls: kafka
+  brokers:
+    - kafka01.softwareheritage.org:9093
+    - kafka02.softwareheritage.org:9093
+    - kafka03.softwareheritage.org:9093
+    - kafka04.softwareheritage.org:9093
+    - kafka05.softwareheritage.org:9093
+    - kafka06.softwareheritage.org:9093
+  group_id: test-graph-replayer-XXX
+  sasl.username: XXX
+  sasl.password: XXX
+  security.protocol: sasl_ssl
+  sasl.mechanism: SCRAM-SHA-512
+  object_types:
+    - snapshot

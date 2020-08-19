@@ -3,7 +3,7 @@ version: '3.7'
 
 services:
   graph-replayer-content:
-    image: softwareheritage/base:20200617-135429
+    image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
     environment:
       STATSD_HOST: prometheus-statsd-exporter
       STATSD_PORT: 9125
@@ -16,7 +16,7 @@ services:
       - storage
 
   graph-replayer-revision:
-    image: softwareheritage/base:20200617-135429
+    image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
     environment:
       STATSD_HOST: prometheus-statsd-exporter
       STATSD_PORT: 9125
@@ -29,7 +29,7 @@ services:
       - storage
 
   graph-replayer-directory:
-    image: softwareheritage/base:20200617-135429
+    image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
     environment:
       STATSD_HOST: prometheus-statsd-exporter
       STATSD_PORT: 9125
@@ -42,7 +42,7 @@ services:
       - storage
 
   graph-replayer-origin:
-    image: softwareheritage/base:20200617-135429
+    image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
     environment:
       STATSD_HOST: prometheus-statsd-exporter
       STATSD_PORT: 9125
@@ -55,7 +55,7 @@ services:
       - storage
 
   graph-replayer-snapshot:
-    image: softwareheritage/base:20200617-135429
+    image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
     environment:
       STATSD_HOST: prometheus-statsd-exporter
       STATSD_PORT: 9125
@@ -68,7 +68,7 @@ services:
       - storage
 
   graph-replayer-release:
-    image: softwareheritage/base:20200617-135429
+    image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
     environment:
       STATSD_HOST: prometheus-statsd-exporter
       STATSD_PORT: 9125
