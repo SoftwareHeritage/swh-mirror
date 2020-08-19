@@ -5,4 +5,4 @@ all: $(IMAGES)
 .PHONY: softwareheritage/%
 
 softwareheritage/%: %/Dockerfile
-	docker build -t $@:latest -f $< .
+	./build_images.sh
