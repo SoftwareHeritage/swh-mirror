@@ -15,7 +15,6 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 4,
   "links": [],
   "panels": [
     {
@@ -24,6 +23,13 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -46,10 +52,8 @@
       "lines": true,
       "linewidth": 1,
       "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
       "percentage": false,
+      "pluginVersion": "7.1.5",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -111,6 +115,13 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -133,10 +144,8 @@
       "lines": true,
       "linewidth": 1,
       "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
       "percentage": false,
+      "pluginVersion": "7.1.5",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -198,6 +207,13 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -220,10 +236,8 @@
       "lines": true,
       "linewidth": 1,
       "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
       "percentage": false,
+      "pluginVersion": "7.1.5",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -281,7 +295,7 @@
     }
   ],
   "refresh": "5s",
-  "schemaVersion": 21,
+  "schemaVersion": 26,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -308,5 +322,5 @@
   "timezone": "",
   "title": "Content Replayer",
   "uid": "XUY3DVaZz",
-  "version": 6
+  "version": 1
 }

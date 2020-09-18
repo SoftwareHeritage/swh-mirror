@@ -15,8 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 2,
-  "id": 18,
-  "iteration": 1551112370226,
+  "iteration": 1600443190630,
   "links": [],
   "panels": [
     {
@@ -24,13 +23,22 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 24,
         "x": 0,
         "y": 0
       },
+      "hiddenSeries": false,
       "id": 4,
       "legend": {
         "alignAsTable": true,
@@ -50,6 +58,7 @@
       "links": [],
       "nullPointMode": "null",
       "percentage": false,
+      "pluginVersion": "7.1.5",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -138,6 +147,12 @@
       "dataFormat": "tsbuckets",
       "datasource": "Prometheus",
       "description": "Each square's color represents the number of tasks that completed within that duration range.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "gridPos": {
         "h": 14,
         "w": 24,
@@ -146,6 +161,7 @@
       },
       "heatmap": {},
       "hideTimeOverride": false,
+      "hideZeroBuckets": false,
       "highlightCards": true,
       "id": 2,
       "legend": {
@@ -154,13 +170,7 @@
       "links": [],
       "repeat": "task",
       "repeatDirection": "v",
-      "scopedVars": {
-        "task": {
-          "selected": true,
-          "text": "swh.loader.git.tasks.UpdateGitRepository",
-          "value": "swh.loader.git.tasks.UpdateGitRepository"
-        }
-      },
+      "reverseYBuckets": false,
       "targets": [
         {
           "expr": "sum(increase(swh_task_duration_seconds_bucket{task=~\"$task\",worker=~\"$worker\"}[$interval])) by (le)",
@@ -178,7 +188,6 @@
         "showHistogram": true
       },
       "tooltipDecimals": null,
-      "transparent": false,
       "type": "heatmap",
       "xAxis": {
         "show": true
@@ -200,7 +209,7 @@
     }
   ],
   "refresh": false,
-  "schemaVersion": 16,
+  "schemaVersion": 26,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -210,6 +219,7 @@
         "auto_count": 100,
         "auto_min": "2m",
         "current": {
+          "selected": false,
           "text": "auto",
           "value": "$__auto_interval_interval"
         },
@@ -286,8 +296,9 @@
       {
         "allValue": null,
         "current": {
-          "text": "swh.loader.git.tasks.UpdateGitRepository",
-          "value": "swh.loader.git.tasks.UpdateGitRepository"
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
         },
         "datasource": "Prometheus",
         "definition": "label_values(swh_task_called_count, task)",
@@ -311,7 +322,10 @@
       {
         "allValue": null,
         "current": {
-          "text": "All",
+          "selected": true,
+          "text": [
+            "All"
+          ],
           "value": [
             "$__all"
           ]
@@ -369,5 +383,5 @@
   "timezone": "",
   "title": "Worker task processing",
   "uid": "b_xh3f9ik",
-  "version": 8
+  "version": 1
 }
