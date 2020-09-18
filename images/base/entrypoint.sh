@@ -24,46 +24,55 @@ echo "### CONFIG FILE ###"
 cat /etc/softwareheritage/config.yml
 echo "###################"
 
-case "$1" in
-    "shell")
-      exec bash -i
-      ;;
-    "db-init")
-      wait_pgsql
-      echo "Initialize the SWH database"
-      exec swh db init
-      ;;
-    "graph-replayer")
-      echo "Starting the SWH mirror graph replayer"
-      exec sh -c "trap : TERM INT; while :; do swh --log-level ${LOG_LEVEL:-WARNING} storage replay; done"
-      ;;
-    "content-replayer")
-      echo "Starting the SWH mirror content replayer"
-      exec sh -c "trap : TERM INT; while :; do swh --log-level ${LOG_LEVEL:-WARNING} objstorage replay; done"
-      ;;
-    "objstorage")
-      echo "Starting the SWH $1 RPC server"
-      exec gunicorn3 \
-           --bind 0.0.0.0:${PORT:-5000} \
-           --bind unix:/var/run/gunicorn/swh/$1.sock \
-           --worker-class aiohttp.worker.GunicornWebWorker \
-           --threads 4 \
-           --workers 2 \
-           --log-level "${LOG_LEVEL:-WARNING}" \
-           --timeout 3600 \
-           "swh.$1.api.server:make_app_from_configfile()"
-      ;;
-    *)
-      wait_pgsql
-      echo "Starting the SWH $1 RPC server"
-      swh db init || echo "swh db init failed, database is probably already initialized; ignored"
-      exec gunicorn3 \
-           --bind 0.0.0.0:${PORT:-5000} \
-           --bind unix:/var/run/gunicorn/swh/$1.sock \
-           --threads 4 \
-           --workers 2 \
-           --log-level "${LOG_LEVEL:-WARNING}" \
-           --timeout 3600 \
-           "swh.$1.api.server:make_app_from_configfile()"
-      ;;
-esac
+echo "Arguments: $@"
+
+while (( "$#" )); do
+  case "$1" in
+      "shell")
+        exec bash -i
+        ;;
+      "db-init")
+        wait_pgsql
+        echo "Initialize the SWH database"
+        exec swh db init
+        ;;
+  	  "fix-mirror")
+  		db_init
+  		echo "Fixing the database for the mirror use case (drop constraints, if any)"
+  		fix_storage_for_mirror
+  		;;
+      "graph-replayer")
+        echo "Starting the SWH mirror graph replayer"
+        exec sh -c "trap : TERM INT; while :; do swh --log-level ${LOG_LEVEL:-WARNING} storage replay; done"
+        ;;
+      "content-replayer")
+        echo "Starting the SWH mirror content replayer"
+        exec sh -c "trap : TERM INT; while :; do swh --log-level ${LOG_LEVEL:-WARNING} objstorage replay; done"
+        ;;
+      "objstorage")
+        echo "Starting the SWH $1 RPC server"
+        exec gunicorn3 \
+             --bind 0.0.0.0:${PORT:-5000} \
+             --bind unix:/var/run/gunicorn/swh/$1.sock \
+             --worker-class aiohttp.worker.GunicornWebWorker \
+             --threads 4 \
+             --workers 2 \
+             --log-level "${LOG_LEVEL:-WARNING}" \
+             --timeout 3600 \
+             "swh.$1.api.server:make_app_from_configfile()"
+        ;;
+      *)
+  		db_init
+        echo "Starting the SWH $1 RPC server"
+        exec gunicorn3 \
+             --bind 0.0.0.0:${PORT:-5000} \
+             --bind unix:/var/run/gunicorn/swh/$1.sock \
+             --threads 4 \
+             --workers 2 \
+             --log-level "${LOG_LEVEL:-WARNING}" \
+             --timeout 3600 \
+             "swh.$1.api.server:make_app_from_configfile()"
+        ;;
+  esac
+  shift
+done

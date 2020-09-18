@@ -1,0 +1,11 @@
+alter table skipped_content drop constraint if exists skipped_content_origin_fkey;
+alter table revision drop constraint if exists revision_author_fkey;
+alter table revision drop constraint if exists revision_committer_fkey;
+alter table revision_history drop constraint if exists revision_history_id_fkey;
+alter table snapshot_branches drop constraint if exists snapshot_branches_snapshot_id_fkey;
+alter table snapshot_branches drop constraint if exists snapshot_branches_branch_id_fkey;
+alter table origin_visit drop constraint if exists origin_visit_origin_fkey;
+alter table origin_visit_status drop constraint if exists origin_visit_status_origin_visit_fkey;
+alter table release drop constraint if exists release_author_fkey;
+alter table raw_extrinsic_metadata drop constraint if exists raw_extrinsic_metadata_authority_fkey;
+alter table raw_extrinsic_metadata drop constraint if exists raw_extrinsic_metadata_fetcher_fkey;

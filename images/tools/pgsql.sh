@@ -18,3 +18,18 @@ wait_pgsql () {
     wait-for-it ${PGHOST}:5432 -s --timeout=0
     until psql postgresql:///?service=swh -c "select 1" > /dev/null 2> /dev/null; do sleep 1; done
 }
+
+db_init () {
+	wait_pgsql
+	if version=$(psql postgresql:///?service=swh -qtA \
+					  -c "select version from dbversion order by version desc limit 1" 2>/dev/null) ; then
+		echo "Database seems already initialized at version $version"
+	else
+		echo "Database seems not initialized yet; initialize it"
+		swh db init
+	fi
+}
+
+fix_storage_for_mirror () {
+	psql postgresql:///?service=swh -f /srv/softwareheritage/utils/fix-storage.sql
+}

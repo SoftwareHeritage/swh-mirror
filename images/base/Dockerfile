@@ -44,6 +44,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
 COPY conf/logconfig.ini /etc/gunicorn/logconfig.ini
 COPY conf/gunicorn.cfg /etc/gunicorn/swh.cfg
 COPY tools/*.sh /srv/softwareheritage/utils/
+COPY tools/*.sql /srv/softwareheritage/utils/
 RUN chmod +x /srv/softwareheritage/utils/*.sh
 
 COPY base/entrypoint.sh /
