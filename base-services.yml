@@ -9,10 +9,10 @@ services:
   db-storage:
     image: postgres:11
     deploy:
-      replicas: 1
+      mode: global
       placement:
         constraints:
-          - node.labels.role == db
+          - node.role == manager
     command: ['-c', 'shared_buffers=4GB', '-c', 'effective_cache_size=4GB', '-c', 'random_page_cost=1.5', '-c', 'max_wal_size=4GB']
     environment:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
@@ -29,8 +29,7 @@ services:
     configs:
       - source: web
         target: /etc/softwareheritage/config.yml
-    command:
-      - serve
+    command: serve
     environment:
       PORT: "5004"
     depends_on:
@@ -39,7 +38,6 @@ services:
   objstorage:
     image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
     deploy:
-      replicas: 1
       placement:
         constraints:
           - node.role == manager
@@ -52,8 +50,7 @@ services:
       PORT: "5003"
       STATSD_HOST: prometheus-statsd-exporter
       STATSD_PORT: 9125
-    command:
-      - objstorage
+    command: objstorage
 
   storage:
     image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
@@ -65,8 +62,7 @@ services:
       PORT: "5002"
       STATSD_HOST: prometheus-statsd-exporter
       STATSD_PORT: 9125
-    command:
-      - storage
+    command: storage
     depends_on:
       - db-storage
     secrets:
@@ -95,6 +91,8 @@ services:
       - "--config.file=/etc/prometheus/prometheus.yml"
     volumes:
       - "./conf/prometheus.yml:/etc/prometheus/prometheus.yml:ro"
+    deploy:
+      mode: global
 
   prometheus-statsd-exporter:
     image: prom/statsd-exporter

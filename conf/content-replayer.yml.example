@@ -11,10 +11,14 @@ objstorage_dst:
   args:
     url: http://objstorage:5003
 
-journal:
+journal_client:
+  cls: kafka
   brokers:
     - kafka1
     - kafka2
     - kafka3
   group_id: test-content-replayer-x-change-me
-  max_poll_records: 1000
+  # sasl.username: XXX
+  # sasl.password: XXX
+  # security.protocol: sasl_ssl
+  # sasl.mechanism: SCRAM-SHA-512

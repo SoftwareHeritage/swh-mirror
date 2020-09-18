@@ -1,7 +1,9 @@
 # Deploy a Software Heritage stack with docker deploy
 
+## Prerequisities
+
 According you have a properly set up docker swarm cluster with support for the
-`docker deploy` command, e.g.:
+`docker stack deploy` command, e.g.:
 
 ```
 ~/swh-docker$ docker node ls
@@ -10,26 +12,28 @@ py47518uzdb94y2sb5yjurj22     host2               Ready               Active    
 n9mfw08gys0dmvg5j2bb4j2m7 *   host1               Ready               Active              Leader              18.09.7
 ```
 
-Note: this might require you activate experimental features of docker as
-described in [docker deploy](https://docs.docker.com/engine/reference/commandline/deploy/)
-documentation.
+Note: on some systems (centos for example), making docker swarm works require
+some permission tuning regarding the firewall or selinux.
 
 In the following how-to, we will assume that the service `STACK` name is `swh`
-(this name is the last argument of the `docker deploy` command below).
+(this name is the last argument of the `docker stack deploy` command below).
 
 Several preparation steps will depend on this name.
+
+We also use [docker-compose](https://github.com/docker/compose) to merge
+compose files, so make sure it iavailable on your system.
 
 ## Set up volumes
 
 Before starting the `swh` service, you may want to specify where the data
 should be stored on your docker hosts.
 
-By default it will use docker volumes for storing databases and the content of
-the objstorage (thus put them in `/var/lib/docker/volumes`.
+By default docker will use docker volumes for storing databases and the content of
+the objstorage (thus put them in `/var/lib/docker/volumes`).
 
-If you want to specify a different location to put a storage in, create the
-storage before starting the docker service. For example for the `objstorage`
-service you will need a storage named `<STACK>_objstorage`:
+**Optional:** if you want to specify a different location to put a storage in,
+create the storage before starting the docker service. For example for the
+`objstorage` service you will need a storage named `<STACK>_objstorage`:
 
 ```
 ~/swh-docker$ docker volume create -d local \
@@ -40,16 +44,19 @@ service you will need a storage named `<STACK>_objstorage`:
 ```
 
 If you want to deploy services like the `swh-objstorage` on several hosts, you
-will a shared storage area in which blob objects will be stored. Typically a
-NFS storage can be used for this. This is not covered in this doc.
+will need a shared storage area in which blob objects will be stored. Typically
+a NFS storage can be used for this, or any existing docker volume driver like
+[REX_Rey](https://rexray.readthedocs.io/). This is not covered in this doc.
 
 Please read the documentation of docker volumes to learn how to use such a
-device as volume proviver for docker.
+device/driver as volume provider for docker.
 
-Note that the provided `docker-compose.yaml` file have a few placement
-constraints, for example the `objstorage` service is forced to be spawn on the
-master node of the docker swarm cluster. Feel free to remove/amend these
-constraints if needed.
+Note that the provided `base-services.yaml` file have a few placement
+constraints: containers that depends on a volume (db-storage and objstorage)
+are stick to the manager node of the cluster, under the assumption persistent
+volumes have been created on this node. Make sure this fits your needs, or
+change these placement constraints.
+
 
 ## Managing secrets
 
@@ -68,24 +75,42 @@ For example:
 
 ## Creating the swh base services
 
-From within this repository, just type:
+If you haven't done it yet, clone this git repository:
+```
+~$ git clone https://forge.softwareheritage.org/source/swh-docker.git
+~$ cd swh-docker
 
 ```
-~/swh-docker$ docker deploy -c docker-compose.yml swh
-Creating service swh_web
-Creating service swh_objstorage
-Creating service swh_storage
-Creating service swh_nginx
-Creating service swh_memcache
-Creating service swh_db-storage
+
+then from within this repository, just type:
+
+```
+~/swh-docker$ docker stack deploy -c base-services.yml swh
+Creating network swh-mirror_default
+Creating config swh-mirror_storage
+Creating config swh-mirror_objstorage
+Creating config swh-mirror_nginx
+Creating config swh-mirror_web
+Creating service swh-mirror_grafana
+Creating service swh-mirror_prometheus-statsd-exporter
+Creating service swh-mirror_web
+Creating service swh-mirror_objstorage
+Creating service swh-mirror_db-storage
+Creating service swh-mirror_memcache
+Creating service swh-mirror_storage
+Creating service swh-mirror_nginx
+Creating service swh-mirror_prometheus
 ~/swh-docker$ docker service ls
-ID                  NAME                MODE                REPLICAS            IMAGE                          PORTS
-bkn2bmnapx7w        swh_db-storage      replicated          1/1                 postgres:11
-2ujcw3dg8f9d        swh_memcache        replicated          1/1                 memcached:latest
-l52hxxl61ijj        swh_nginx           replicated          1/1                 nginx:latest                   *:5080->80/tcp
-3okk2njpbopx        swh_objstorage      replicated          1/1                 softwareheritage/base:latest
-zais9ey62weu        swh_storage         replicated          1/1                 softwareheritage/base:latest
-7sm6g5ecff19        swh_web             replicated          1/1                 softwareheritage/web:latest
+ID                  NAME                                    MODE                REPLICAS            IMAGE                                   PORTS
+sz98tofpeb3j        swh-mirror_db-storage                   global              1/1                 postgres:11
+sp36lbgfd4qi        swh-mirror_grafana                      replicated          1/1                 grafana/grafana:latest
+7oja81jngiwo        swh-mirror_memcache                     replicated          1/1                 memcached:latest
+y5te0gqs93li        swh-mirror_nginx                        replicated          1/1                 nginx:latest                            *:5081->5081/tcp
+79t3r3mv3qn6        swh-mirror_objstorage                   replicated          1/1                 softwareheritage/base:20200918-133743
+l7q2zocoyvq6        swh-mirror_prometheus                   global              1/1                 prom/prometheus:latest
+p6hnd90qnr79        swh-mirror_prometheus-statsd-exporter   replicated          1/1                 prom/statsd-exporter:latest
+jjry62tz3k76        swh-mirror_storage                      replicated          1/1                 softwareheritage/base:20200918-133743
+jkkm7qm3awfh        swh-mirror_web                          replicated          1/1                 softwareheritage/web:20200918-133743
 ```
 
 This will start a series of containers with:
@@ -99,7 +124,7 @@ This will start a series of containers with:
 - a grafana server,
 - an nginx server serving as reverse proxy for grafana and swh-web.
 
-using the latest published version of the docker images.
+using the latest published version of the docker images by default.
 
 
 The nginx frontend will listen on the 5081 port, so you can use:
@@ -109,8 +134,10 @@ The nginx frontend will listen on the 5081 port, so you can use:
   (log in with admin/admin).
 
 
-Note that if the 'latest' docker images work, it is highly recommended to
-explicitly specify the version of the image you want to use.
+>[!WARNING]
+>the 'latest' docker images work, it is highly recommended to
+>explicitly specify the version of the image you want to use.
+
 Docker images for the Software Heritage stack are tagged with their build date:
 
   docker images -f reference='softwareheritage/*:20*'
@@ -123,20 +150,21 @@ Docker images for the Software Heritage stack are tagged with their build date:
 To specify the tag to be used, simply set the SWH_IMAGE_TAG environment variable, like:
 
   export SWH_IMAGE_TAG=20200819-112604
-  docker deploy -c docker-compose.yml swh
+  docker deploy -c base-services.yml swh
 
-Warning: make sure to have this variable properly set for any later `docker deploy`
-command you type, otherwise you running containers will be recreated using the
-':latest' image (which might **not** be the latest available version, nor
-consistent amond the docker nodes on you swarm cluster).
+>[!WARNING]
+>make sure to have this variable properly set for any later `docker deploy`
+>command you type, otherwise you running containers will be recreated using the
+>':latest' image (which might **not** be the latest available version, nor
+>consistent amond the docker nodes on you swarm cluster).
 
 ## Updating a configuration
 
 When you modify a configuration file exposed to docker services via the `docker
-config` system, you need to destroy the old config before being able to
-recreate them (docker is currently not capable of updating an existing config.)
-Unfortunately that also means you need to recreate every docker container using
-this config.
+config` system. Unfortunately, docker does not support updating these config
+objects, so you need to destroy the old config before being able to recreate
+them. That also means you need to recreate every docker container using this
+config.
 
 For example, if you edit the file `conf/storage.yml`:
 
@@ -145,7 +173,7 @@ For example, if you edit the file `conf/storage.yml`:
 swh_storage
 ~/swh-docker$ docker config rm swh_storage
 swh_storage
-~/swh-docker$ docker deploy -c docker-compose.yml swh
+~/swh-docker$ docker stack deploy -c base-services.yml swh
 Creating config swh_storage
 Creating service swh_storage
 Updating service swh_nginx (id: l52hxxl61ijjxnj9wg6ddpaef)
@@ -153,10 +181,11 @@ Updating service swh_memcache (id: 2ujcw3dg8f9dm4r6qmgy0sb1e)
 Updating service swh_db-storage (id: bkn2bmnapx7wgvwxepume71k1)
 Updating service swh_web (id: 7sm6g5ecff1979t0jd3dmsvwz)
 Updating service swh_objstorage (id: 3okk2njpbopxso3n3w44ydyf9)
+[...]
 ```
 
 See https://docs.docker.com/engine/swarm/configs/ for more details on
-how to use the config system in docker swarm.
+how to use the config system in a docker swarm cluster.
 
 Note that since persistent data (databases and objects) are stored in volumes,
 you can safely destoy and recreate any container you want, you will not loose
@@ -175,7 +204,7 @@ This can be done as follow:
 
 ```
 ~/swh-docker$ export SWH_IMAGE_TAG=<new version>
-~/swh-docker$ docker deploy -c docker-compose.yml swh
+~/swh-docker$ docker stack deploy -c base-services.yml swh
 ```
 
 Note that this will reset the replicas config to their default values.
@@ -186,7 +215,7 @@ If you want to update only a specific service, you can also use:
 ```
 ~/swh-docker$ docker service update --image \
        softwareheritage/base:${SWH_IMAGE_TAG} ) \
-       swh_graph-replayer-origin
+       swh_graph-replayer
 ```
 
 
@@ -202,9 +231,9 @@ responsibility of kafka based `replayer` services:
 
 - the `content replayer` which is in charge of filling the object storage.
 
-Examples of docker-compose files and configuration files are provided in
-the `graph-replayer-remote-bytopic.yml` compose file for replayer services
-using configuration from yaml files in `conf/graph-replayer/remote/`.
+Examples of docker deploy files and configuration files are provided in
+the `graph-replayer.yml` deploy file for replayer services
+using configuration from yaml files in `conf/graph-replayer.yml`.
 
 Copy these example files as plain yaml ones then modify them to replace
 the XXX merkers with proper values (also make sure the kafka server list
@@ -219,21 +248,47 @@ is up to date.) Parameters to check/update are:
 - `journal_client/sasl.username`: kafka authentication username.
 - `journal_client/sasl.password`: kafka authentication password.
 
+Then you need to merge the compose files "by hand" (due to this still
+[unresolved](https://github.com/docker/cli/issues/1651)
+[bugs](https://github.com/docker/cli/issues/1582)). For this we will use
+[docker-compose](https://github.com/docker/compose) as helper tool to merge the
+compose files.
+
+To merge 2 (or more) compose files together, typically `base-services.yml` with
+a mirror-related file:
+
 ```
-~/swh-docker$ cd conf/graph-replayer/remote
-~/swh-docker/conf/graph-replayer/remote$ for i in *.example; do cp $i ${i/.example//}; done
-~/swh-docker/conf/graph-replayer/remote$ # edit .yml files
-~/swh-docker/conf/graph-replayer/remote$ cd ../../..
-~/swh-docker$
+~/swh-docker$ docker-compose \
+    -f base-services.yml \
+	-f graph-replayer-override.yml \
+	config > merged-compose.yml
+```
+
+Then use this generated file as argument of the `docker stack deploy` command.
+
+
+## Graph replayer
+
+To run the graph replayer:
+
+```
+~/swh-docker$ cd conf
+~/swh-docker/conf$ cp graph-replayer.yml.example graph-replayer.yml
+~/swh-docker/conf$ # edit graph-replayer.yml files
+~/swh-docker/conf$ cd ..
 
 ```
 
-Once you have properly edited config files, you can start these services with:
+Once you have properly edited the `conf/graph-replayer.yml` config file, you can
+start these services with:
 
 ```
-~/swh-docker$ docker deploy \
-   -c docker-compose.yml \
-   -c graph-replayer-remote-bytopic.yml \
+~/swh-docker$ docker-composer \
+    -f base-services.yml \
+	-f graph-replayer-override.yml \
+	config > graph-replayer.yml
+~/swh-docker$ docker stack deploy \
+   -c graph-replayer.yml \
    swh
 [...]
 ```
@@ -241,17 +296,15 @@ Once you have properly edited config files, you can start these services with:
 You can check everything is running with:
 
 ```
+~/swh-docker$ docker stack ls
+NAME                SERVICES            ORCHESTRATOR
+swh-mirror          11                  Swarm
 ~/swh-docker$ docker service ls
 ID                  NAME                             MODE                REPLICAS            IMAGE                          PORTS
 88djaq3jezjm        swh_db-storage                   replicated          1/1                 postgres:11
 m66q36jb00xm        swh_grafana                      replicated          1/1                 grafana/grafana:latest
 qfsxngh4s2sv        swh_content-replayer             replicated          1/1                 softwareheritage/base:latest
-qcl0n3ngr2uv        swh_graph-replayer-content       replicated          2/2                 softwareheritage/base:latest
-f1hop14w6b9h        swh_graph-replayer-directory     replicated          4/4                 softwareheritage/base:latest
-dcpvbf7h4fja        swh_graph-replayer-origin        replicated          2/2                 softwareheritage/base:latest
-1njy5iuugmk2        swh_graph-replayer-release       replicated          2/2                 softwareheritage/base:latest
-cbe600nl9bdb        swh_graph-replayer-revision      replicated          4/4                 softwareheritage/base:latest
-5hroiithan6c        swh_graph-replayer-snapshot      replicated          2/2                 softwareheritage/base:latest
+qcl0n3ngr2uv        swh_graph-replayer               replicated          2/2                 softwareheritage/base:latest
 zn8dzsron3y7        swh_memcache                     replicated          1/1                 memcached:latest
 wfbvf3yk6t41        swh_nginx                        replicated          1/1                 nginx:latest                   *:5081->5081/tcp
 thtev7o0n6th        swh_objstorage                   replicated          1/1                 softwareheritage/base:latest
@@ -265,27 +318,71 @@ su8eka2b5cbf        swh_web                          replicated          1/1    
 If everything is OK, you should have your mirror filling. Check docker logs:
 
 ```
-~/swh-docker$ docker service logs swh_content-replayer
+~/swh-docker$ docker service logs swh_graph-replayer
 [...]
 ```
 
 or:
 
 ```
-~/swh-docker$ docker service logs --tail 100 --follow swh_graph-replayer-directory
+~/swh-docker$ docker service logs --tail 100 --follow swh_graph-replayer
 [...]
 ```
+
+
+## Graph replayer
+
+Similarly, to run the content replayer:
+
+```
+~/swh-docker$ cd conf
+~/swh-docker/conf$ cp content-replayer.yml.example content-replayer.yml
+~/swh-docker/conf$ # edit content-replayer.yml files
+~/swh-docker/conf$ cd ..
+
+```
+
+Once you have properly edited the `conf/content-replayer.yml` config file, you can
+start these services with:
+
+```
+~/swh-docker$ docker-composer \
+    -f base-services.yml \
+	-f content-replayer-override.yml \
+	config > content-replayer.yml
+~/swh-docker$ docker stack deploy \
+   -c content-replayer.yml \
+   swh
+[...]
+```
+
+## Full mirror
+
+Putting all together is just a matter of merging the compose files:
+
+```
+~/swh-docker$ docker-composer \
+    -f base-services.yml \
+	-f graph-replayer-override.yml \
+	-f content-replayer-override.yml \
+	config > mirror.yml
+~/swh-docker$ docker stack deploy \
+   -c mirror.yml \
+   swh
+[...]
+```
+
 
 ## Scaling up services
 
 In order to scale up a replayer service, you can use the `docker scale` command. For example:
 
 ```
-~/swh-docker$ docker service scale swh_graph-replayer-directory=4
+~/swh-docker$ docker service scale swh_graph-replayer=4
 [...]
 ```
 
-will start 4 copies of the directory replayer service.
+will start 4 copies of the graph replayer service.
 
 Notes:
 
@@ -299,4 +396,4 @@ Notes:
   several hundreds of Mb/s). So make sure you have a correctly tuned database
   and enough network bw.
 
-- Biggest topics are the directory, content and revision.
+- Biggest topics are the directory, revision and content.
