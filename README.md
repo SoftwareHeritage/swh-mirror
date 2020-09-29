@@ -330,7 +330,7 @@ or:
 ```
 
 
-## Graph replayer
+## Content replayer
 
 Similarly, to run the content replayer:
 
