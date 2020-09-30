@@ -1,35 +1,43 @@
 #!/bin/bash
 
 setup_pgsql () {
-    echo "${PGHOST}:5432:${PGDATABASE:-swh}:${PGUSER:-swh}:$(cat /run/secrets/postgres-password)" \
-		 > ~/.pgpass
+    : > ~/.pgpass
+    : > ~/.pg_service.conf
+
+	PGPASSWORD=$(cat $POSTGRES_PASSWORD_FILE)
+    echo "${PGHOST}:5432:template1:${PGUSER}:${PGPASSWORD}" >> ~/.pgpass
+    echo "${PGHOST}:5432:${PGUSER}:${PGUSER}:${PGPASSWORD}" >> ~/.pgpass
+    echo "${PGHOST}:5432:${POSTGRES_DB}:${PGUSER}:${PGPASSWORD}" >> ~/.pgpass
+
     cat > ~/.pg_service.conf <<EOF
 [swh]
-dbname=${PGDATABASE:-swh}
+dbname=${POSTGRES_DB}
 host=${PGHOST}
 port=5432
-user=${PGUSER:-swh}
+user=${PGUSER}
 EOF
     chmod 0600 ~/.pgpass
 }
 
 wait_pgsql () {
-    echo Waiting for postgresql to start
-    wait-for-it ${PGHOST}:5432 -s --timeout=0
-    until psql postgresql:///?service=swh -c "select 1" > /dev/null 2> /dev/null; do sleep 1; done
+    local db_to_check
+    if [ $# -ge 1 ]; then
+        db_to_check="$1"
+    else
+        db_to_check=$POSTGRES_DB
+    fi
+
+    if [ $# -ge 2 ]; then
+        host_to_check="$2"
+    else
+        host_to_check=$PGHOST
+    fi
+
+    echo Waiting for postgresql to start on $host_to_check and for database $db_to_check to be available.
+    wait-for-it ${host_to_check}:5432 -s --timeout=0
+    until psql "dbname=${db_to_check} port=5432 host=${host_to_check} user=${PGUSER}" -c "select 'postgresql is up!' as connected"; do sleep 1; done
 }
 
-db_init () {
-	wait_pgsql
-	if version=$(psql postgresql:///?service=swh -qtA \
-					  -c "select version from dbversion order by version desc limit 1" 2>/dev/null) ; then
-		echo "Database seems already initialized at version $version"
-	else
-		echo "Database seems not initialized yet; initialize it"
-		swh db init
-	fi
-}
-
-fix_storage_for_mirror () {
-	psql postgresql:///?service=swh -f /srv/softwareheritage/utils/fix-storage.sql
+check_pgsql_db_created () {
+    psql "dbname=${POSTGRES_DB} port=5432 host=${PGHOST} user=${PGUSER}" -c "select 'postgresql is up!' as connected" >/dev/null 2>/dev/null
 }

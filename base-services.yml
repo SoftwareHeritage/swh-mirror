@@ -7,7 +7,7 @@ services:
       replicas: 1
 
   db-storage:
-    image: postgres:11
+    image: postgres:12
     deploy:
       mode: global
       placement:
@@ -17,6 +17,8 @@ services:
     environment:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
       POSTGRES_USER: swh
+      POSTGRES_DB:
+      # unset POSTGRES_DB: we're handling db creation ourselves in the backend
     volumes:
       - "storage:/var/lib/postgresql/data"
     secrets:
@@ -59,6 +61,8 @@ services:
         target: /etc/softwareheritage/config.yml
     environment:
       PGHOST: db-storage
+      PGUSER: swh
+      POSTGRES_DB: swh-storage
       PORT: "5002"
       STATSD_HOST: prometheus-statsd-exporter
       STATSD_PORT: 9125

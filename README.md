@@ -55,7 +55,7 @@ Note that the provided `base-services.yaml` file have a few placement
 constraints: containers that depends on a volume (db-storage and objstorage)
 are stick to the manager node of the cluster, under the assumption persistent
 volumes have been created on this node. Make sure this fits your needs, or
-change these placement constraints.
+amend these placement constraints.
 
 
 ## Managing secrets
@@ -221,6 +221,12 @@ If you want to update only a specific service, you can also use:
 
 # Set up a mirror
 
+>[!WARNING] you cannot "upgrade" an existing docker stack built from the
+>base-services.yml file to a mirror one; you need to recreate it; more
+>precisely, you need to drop the storage database before. This is due to the
+>fact the storage database for a mirror is not initialized the same way as
+>the default storage database.
+
 A Software Heritage mirror consists in base Software Heritage services, as
 described above, without any worker related to web scraping nor source code
 repository loading. Instead, filling local storage and objstorage is the
@@ -236,7 +242,7 @@ the `graph-replayer.yml` deploy file for replayer services
 using configuration from yaml files in `conf/graph-replayer.yml`.
 
 Copy these example files as plain yaml ones then modify them to replace
-the XXX merkers with proper values (also make sure the kafka server list
+the XXX markers with proper values (also make sure the kafka server list
 is up to date.) Parameters to check/update are:
 
 - `journal_client/brokers`: list of kafka brokers.
@@ -261,15 +267,19 @@ a mirror-related file:
 ~/swh-docker$ docker-compose \
     -f base-services.yml \
 	-f graph-replayer-override.yml \
-	config > merged-compose.yml
+	config > mirror.yml
 ```
 
-Then use this generated file as argument of the `docker stack deploy` command.
+Then use this generated file as argument of the `docker stack deploy` command, e.g.:
+
+```
+~/swh-docker$ docker stack deploy -c mirror.yml swh-mirror
+```
 
 
 ## Graph replayer
 
-To run the graph replayer:
+To run the graph replayer compoenent of a mirror:
 
 ```
 ~/swh-docker$ cd conf
@@ -289,7 +299,7 @@ start these services with:
 	config > graph-replayer.yml
 ~/swh-docker$ docker stack deploy \
    -c graph-replayer.yml \
-   swh
+   swh-mirror
 [...]
 ```
 
@@ -300,32 +310,32 @@ You can check everything is running with:
 NAME                SERVICES            ORCHESTRATOR
 swh-mirror          11                  Swarm
 ~/swh-docker$ docker service ls
-ID                  NAME                             MODE                REPLICAS            IMAGE                          PORTS
-88djaq3jezjm        swh_db-storage                   replicated          1/1                 postgres:11
-m66q36jb00xm        swh_grafana                      replicated          1/1                 grafana/grafana:latest
-qfsxngh4s2sv        swh_content-replayer             replicated          1/1                 softwareheritage/base:latest
-qcl0n3ngr2uv        swh_graph-replayer               replicated          2/2                 softwareheritage/base:latest
-zn8dzsron3y7        swh_memcache                     replicated          1/1                 memcached:latest
-wfbvf3yk6t41        swh_nginx                        replicated          1/1                 nginx:latest                   *:5081->5081/tcp
-thtev7o0n6th        swh_objstorage                   replicated          1/1                 softwareheritage/base:latest
-ysgdoqshgd2k        swh_prometheus                   replicated          1/1                 prom/prometheus:latest
-u2mjjl91aebz        swh_prometheus-statsd-exporter   replicated          1/1                 prom/statsd-exporter:latest
-xyf2xgt465ob        swh_storage                      replicated          1/1                 softwareheritage/base:latest
-su8eka2b5cbf        swh_web                          replicated          1/1                 softwareheritage/web:latest
+ID                  NAME                                    MODE                REPLICAS            IMAGE                          PORTS
+88djaq3jezjm        swh-mirror_db-storage                   replicated          1/1                 postgres:11
+m66q36jb00xm        swh-mirror_grafana                      replicated          1/1                 grafana/grafana:latest
+qfsxngh4s2sv        swh-mirror_content-replayer             replicated          1/1                 softwareheritage/base:latest
+qcl0n3ngr2uv        swh-mirror_graph-replayer               replicated          1/1                 softwareheritage/base:latest
+zn8dzsron3y7        swh-mirror_memcache                     replicated          1/1                 memcached:latest
+wfbvf3yk6t41        swh-mirror_nginx                        replicated          1/1                 nginx:latest                   *:5081->5081/tcp
+thtev7o0n6th        swh-mirror_objstorage                   replicated          1/1                 softwareheritage/base:latest
+ysgdoqshgd2k        swh-mirror_prometheus                   replicated          1/1                 prom/prometheus:latest
+u2mjjl91aebz        swh-mirror_prometheus-statsd-exporter   replicated          1/1                 prom/statsd-exporter:latest
+xyf2xgt465ob        swh-mirror_storage                      replicated          1/1                 softwareheritage/base:latest
+su8eka2b5cbf        swh-mirror_web                          replicated          1/1                 softwareheritage/web:latest
 ```
 
 
 If everything is OK, you should have your mirror filling. Check docker logs:
 
 ```
-~/swh-docker$ docker service logs swh_graph-replayer
+~/swh-docker$ docker service logs swh-mirror_graph-replayer
 [...]
 ```
 
 or:
 
 ```
-~/swh-docker$ docker service logs --tail 100 --follow swh_graph-replayer
+~/swh-docker$ docker service logs --tail 100 --follow swh-mirror_graph-replayer
 [...]
 ```
 
@@ -352,13 +362,13 @@ start these services with:
 	config > content-replayer.yml
 ~/swh-docker$ docker stack deploy \
    -c content-replayer.yml \
-   swh
+   swh-mirror
 [...]
 ```
 
 ## Full mirror
 
-Putting all together is just a matter of merging the compose files:
+Putting all together is just a matter of merging the 3 compose files:
 
 ```
 ~/swh-docker$ docker-composer \
@@ -368,7 +378,7 @@ Putting all together is just a matter of merging the compose files:
 	config > mirror.yml
 ~/swh-docker$ docker stack deploy \
    -c mirror.yml \
-   swh
+   swh-mirror
 [...]
 ```
 

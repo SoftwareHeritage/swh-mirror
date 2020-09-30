@@ -13,9 +13,7 @@ fi
 
 # generate the pgservice file if any
 if [ -f /run/secrets/postgres-password ]; then
-    echo 'Available secrets:'
-    ls -l /run/secrets/
-
+	POSTGRES_PASSWORD_FILE=/run/secrets/postgres-password
 	setup_pgsql
 fi
 
@@ -31,16 +29,6 @@ while (( "$#" )); do
       "shell")
         exec bash -i
         ;;
-      "db-init")
-        wait_pgsql
-        echo "Initialize the SWH database"
-        exec swh db init
-        ;;
-  	  "fix-mirror")
-  		db_init
-  		echo "Fixing the database for the mirror use case (drop constraints, if any)"
-  		fix_storage_for_mirror
-  		;;
       "graph-replayer")
         echo "Starting the SWH mirror graph replayer"
         exec sh -c "trap : TERM INT; while :; do swh --log-level ${LOG_LEVEL:-WARNING} storage replay; done"
@@ -62,7 +50,16 @@ while (( "$#" )); do
              "swh.$1.api.server:make_app_from_configfile()"
         ;;
       *)
-  		db_init
+        wait_pgsql template1
+
+        echo Database setup
+        if ! check_pgsql_db_created; then
+            echo Creating database and extensions...
+            swh db create --db-name ${POSTGRES_DB} storage
+        fi
+        echo Initializing the database...
+        swh db init --db-name ${POSTGRES_DB} --flavor ${FLAVOR:-default} storage
+
         echo "Starting the SWH $1 RPC server"
         exec gunicorn3 \
              --bind 0.0.0.0:${PORT:-5000} \
