@@ -6,7 +6,7 @@ services:
     environment:
       FLAVOR: mirror
   graph-replayer:
-    image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage:replayer-${SWH_IMAGE_TAG:-latest}
     environment:
       STATSD_HOST: prometheus-statsd-exporter
       STATSD_PORT: 9125
@@ -21,3 +21,4 @@ services:
 configs:
   graph-replayer:
     file: conf/graph-replayer.yml
+    name: graph-replayer
