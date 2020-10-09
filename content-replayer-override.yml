@@ -3,7 +3,7 @@ version: '3.7'
 
 services:
   content-replayer:
-    image: softwareheritage:replayer-${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/replayer:${SWH_IMAGE_TAG:-latest}
     environment:
       STATSD_HOST: prometheus-statsd-exporter
       STATSD_PORT: 9125

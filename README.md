@@ -106,11 +106,11 @@ sz98tofpeb3j        swh-mirror_db-storage                   global              
 sp36lbgfd4qi        swh-mirror_grafana                      replicated          1/1                 grafana/grafana:latest
 7oja81jngiwo        swh-mirror_memcache                     replicated          1/1                 memcached:latest
 y5te0gqs93li        swh-mirror_nginx                        replicated          1/1                 nginx:latest                            *:5081->5081/tcp
-79t3r3mv3qn6        swh-mirror_objstorage                   replicated          1/1                 softwareheritage:base-20200918-133743
+79t3r3mv3qn6        swh-mirror_objstorage                   replicated          1/1                 softwareheritage/base:20200918-133743
 l7q2zocoyvq6        swh-mirror_prometheus                   global              1/1                 prom/prometheus:latest
 p6hnd90qnr79        swh-mirror_prometheus-statsd-exporter   replicated          1/1                 prom/statsd-exporter:latest
-jjry62tz3k76        swh-mirror_storage                      replicated          1/1                 softwareheritage:base-20200918-133743
-jkkm7qm3awfh        swh-mirror_web                          replicated          1/1                 softwareheritage:web-20200918-133743
+jjry62tz3k76        swh-mirror_storage                      replicated          1/1                 softwareheritage/base:20200918-133743
+jkkm7qm3awfh        swh-mirror_web                          replicated          1/1                 softwareheritage/web:20200918-133743
 ```
 
 This will start a series of containers with:
@@ -140,7 +140,7 @@ The nginx frontend will listen on the 5081 port, so you can use:
 
 Docker images for the Software Heritage stack are tagged with their build date:
 
-  docker images -f reference='softwareheritage:*-20*'
+  docker images -f reference='softwareheritage/*:20*'
   REPOSITORY              TAG                     IMAGE ID            CREATED             SIZE
   softwareheritage        web-20200819-112604     32ab8340e368        About an hour ago   339MB
   softwareheritage        base-20200819-112604    19fe3d7326c5        About an hour ago   242MB
@@ -240,7 +240,7 @@ replayer service):
 
 ```
 ~/swh-docker$ docker service update --image \
-       softwareheritage:replayer-${SWH_IMAGE_TAG} ) \
+       softwareheritage/replayer:${SWH_IMAGE_TAG} ) \
        swh_graph-replayer
 ```
 
@@ -339,15 +339,15 @@ swh-mirror          11                  Swarm
 ID                  NAME                                    MODE                REPLICAS            IMAGE                          PORTS
 88djaq3jezjm        swh-mirror_db-storage                   replicated          1/1                 postgres:11
 m66q36jb00xm        swh-mirror_grafana                      replicated          1/1                 grafana/grafana:latest
-qfsxngh4s2sv        swh-mirror_content-replayer             replicated          1/1                 softwareheritage:replayer-latest
-qcl0n3ngr2uv        swh-mirror_graph-replayer               replicated          1/1                 softwareheritage:replayer-latest
+qfsxngh4s2sv        swh-mirror_content-replayer             replicated          1/1                 softwareheritage/replayer:latest
+qcl0n3ngr2uv        swh-mirror_graph-replayer               replicated          1/1                 softwareheritage/replayer:latest
 zn8dzsron3y7        swh-mirror_memcache                     replicated          1/1                 memcached:latest
 wfbvf3yk6t41        swh-mirror_nginx                        replicated          1/1                 nginx:latest                   *:5081->5081/tcp
-thtev7o0n6th        swh-mirror_objstorage                   replicated          1/1                 softwareheritage:base-latest
+thtev7o0n6th        swh-mirror_objstorage                   replicated          1/1                 softwareheritage/base:latest
 ysgdoqshgd2k        swh-mirror_prometheus                   replicated          1/1                 prom/prometheus:latest
 u2mjjl91aebz        swh-mirror_prometheus-statsd-exporter   replicated          1/1                 prom/statsd-exporter:latest
-xyf2xgt465ob        swh-mirror_storage                      replicated          1/1                 softwareheritage:base-latest
-su8eka2b5cbf        swh-mirror_web                          replicated          1/1                 softwareheritage:web-latest
+xyf2xgt465ob        swh-mirror_storage                      replicated          1/1                 softwareheritage/base:latest
+su8eka2b5cbf        swh-mirror_web                          replicated          1/1                 softwareheritage/web:latest
 ```
 
 

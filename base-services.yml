@@ -27,7 +27,7 @@ services:
         mode: 0400
 
   web:
-    image: softwareheritage:web-${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/web:${SWH_IMAGE_TAG:-latest}
     configs:
       - source: web
         target: /etc/softwareheritage/config.yml
@@ -38,7 +38,7 @@ services:
       - memcache
 
   objstorage:
-    image: softwareheritage:base-${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
     deploy:
       placement:
         constraints:
@@ -55,7 +55,7 @@ services:
     command: objstorage
 
   storage:
-    image: softwareheritage:base-${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
     configs:
       - source: storage
         target: /etc/softwareheritage/config.yml
