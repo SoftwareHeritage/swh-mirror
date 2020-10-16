@@ -20,7 +20,7 @@ services:
       POSTGRES_DB:
       # unset POSTGRES_DB: we're handling db creation ourselves in the backend
     volumes:
-      - "storage:/var/lib/postgresql/data"
+      - "storage:/var/lib/postgresql/data:rw,Z"
     secrets:
       - source: postgres-password
         uid: '999'
@@ -44,7 +44,7 @@ services:
         constraints:
           - node.role == manager
     volumes:
-      - "objstorage:/srv/softwareheritage/objects"
+      - "objstorage:/srv/softwareheritage/objects:rw,Z"
     configs:
       - source: objstorage
         target: /etc/softwareheritage/config.yml
@@ -94,7 +94,7 @@ services:
       - "--web.external-url=/prometheus"
       - "--config.file=/etc/prometheus/prometheus.yml"
     volumes:
-      - "./conf/prometheus.yml:/etc/prometheus/prometheus.yml:ro"
+      - "./conf/prometheus.yml:/etc/prometheus/prometheus.yml:ro,Z"
     deploy:
       mode: global
 
@@ -103,7 +103,7 @@ services:
     command:
       - "--statsd.mapping-config=/etc/prometheus/statsd-mapping.yml"
     volumes:
-      - "./conf/prometheus-statsd-mapping.yml:/etc/prometheus/statsd-mapping.yml:ro"
+      - "./conf/prometheus-statsd-mapping.yml:/etc/prometheus/statsd-mapping.yml:ro,Z"
 
   grafana:
     image: grafana/grafana
@@ -112,8 +112,8 @@ services:
     environment:
       GF_SERVER_ROOT_URL: http://localhost:5081/grafana
     volumes:
-      - "./conf/grafana/provisioning:/etc/grafana/provisioning:ro"
-      - "./conf/grafana/dashboards:/var/lib/grafana/dashboards"
+      - "./conf/grafana/provisioning:/etc/grafana/provisioning:ro,Z"
+      - "./conf/grafana/dashboards:/var/lib/grafana/dashboards:rw,Z"
 
 volumes:
   objstorage:
