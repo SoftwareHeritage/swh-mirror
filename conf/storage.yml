@@ -5,4 +5,4 @@ storage:
     objstorage:
       cls: remote
       args:
-        url: http://objstorage:5000/
+        url: http://objstorage:5003/
