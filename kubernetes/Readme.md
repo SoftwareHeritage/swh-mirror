@@ -1,4 +1,12 @@
+## Current status
 
+- basic configuration for one node cluster
+- use a private registry to deploy the docker image
+
+Services :
+- objstorage
+- storage-db
+- storage
 ## Prerquisite
 
 ### Directories
