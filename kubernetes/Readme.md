@@ -13,6 +13,8 @@ Services :
 ```
 # sudo mkdir -p /srv/softwareheritage-kube/storage-db
 # sudo mkdir -p /srv/softwareheritage-kube/objects
+# sudo mkdir -p /srv/softwareheritage-kube/prometheus 
+# sudo chown nobody /srv/softwareheritage-kube/prometheus  # prometheus is running with user nobody
 ```
 Must match the content of `02-storage-db.yaml`
 
@@ -29,7 +31,9 @@ Must match the content of `02-storage-db.yaml`
 # kubectl apply -f registry/00-registry.yml
 ```
 
-## Build the base image
+## Build the images
+
+### SWH images
 
 ```
 # cd images
@@ -38,6 +42,19 @@ Must match the content of `02-storage-db.yaml`
 # docker tag softwareheritage/base:latest registry.default/softwareheritage/base:latest
 # docker push registry.default/softwareheritage/base:latest
 
+# docker tag softwareheritage/web:latest registry.default/softwareheritage/web:latest
+# docker push registry.default/softwareheritage/web:latest
+
+```
+
+### grafana image
+
+This image goal is to be able to configure grafana during the startup
+
+```
+# cd images/grafana
+# docker build --pull -t registry.default/softwareheritage/grafana .
+# docker push registry.default/softwareheritage/grafana
 ```
 
 ## start the objstorage
@@ -128,3 +145,14 @@ and API</a> for more information</p>
 </body>
 </html>
 ```
+
+# TODOs
+
+- [ ] registry persistence
+- [ ] storage for sqlite database for web
+- [ ] prometheus exporter
+- [ ] prometheus
+- [ ] grafana
+- [ ] graph replayer
+- [ ] content replayer
+- [ ] clustered configuration

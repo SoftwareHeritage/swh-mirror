@@ -76,6 +76,7 @@ spec:
       containers:
       - name: storage-db
         image: postgres:13.0
+        imagePullPolicy: Always
         ports:
         - containerPort: 5432
         env:

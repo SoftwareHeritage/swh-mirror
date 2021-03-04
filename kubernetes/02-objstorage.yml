@@ -67,8 +67,7 @@ spec:
       containers:
       - name: objstorage
         image: registry.default/softwareheritage/base:latest
-        command: 
-          - /entrypoint.sh
+        args: 
           - objstorage
         ports:
         - containerPort: 5003
