@@ -1,0 +1,75 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: content-replayer
+data:
+  config.yml: |
+    objstorage:
+      cls: remote
+      args:
+        url: https://objstorage.staging.swh.network
+        max_retries: 5
+        pool_connections: 100
+        pool_maxsize: 200
+
+    objstorage_dst:
+      cls: remote
+      args:
+        url: http://objstorage:5003
+
+    journal_client:
+      # cls: kafka
+      brokers:
+        # TODO: adapt to match the right environment
+        # staging
+        - broker0.journal.staging.swh.network:9093
+        # production
+        # - broker1.journal.softwareheritage.org
+        # - broker2.journal.softwareheritage.org
+        # - broker3.journal.softwareheritage.org
+        # - broker4.journal.softwareheritage.org
+      # TODO: customize the following according to your credentials
+      sasl.username: swh-username
+      sasl.password: secretpassword
+      security.protocol: sasl_ssl
+      sasl.mechanism: SCRAM-SHA-512
+      # The prefix must match the username
+      group_id: swh-username-content-replayer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: content-replayer
+  labels:
+    app: content-replayer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: content-replayer
+  template:
+    metadata:
+      labels:
+        app: content-replayer
+    spec:
+      containers:
+      - name: content-replayer
+        image: registry.default/softwareheritage/replayer:latest
+        imagePullPolicy: Always
+        args: 
+          - content-replayer
+        env:
+        - name: STATSD_HOST
+          value: "prometheus-statsd-exporter"
+        - name: STATSD_PORT
+          value: "9125"
+        volumeMounts:
+          - name: config
+            mountPath: /etc/softwareheritage/config.yml
+            subPath: config.yml
+            readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: content-replayer

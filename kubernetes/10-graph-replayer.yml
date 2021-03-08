@@ -1,0 +1,105 @@
+# # Mirror specific services
+# version: '3.7'
+
+# services:
+#   storage:
+#     environment:
+#       FLAVOR: mirror
+#   graph-replayer:
+#     image: softwareheritage/replayer:${SWH_IMAGE_TAG:-latest}
+#     environment:
+#       STATSD_HOST: prometheus-statsd-exporter
+#       STATSD_PORT: 9125
+#     configs:
+#       - source: graph-replayer
+#         target: /etc/softwareheritage/config.yml
+#     command:
+#       - graph-replayer
+#     depends_on:
+#       - storage
+
+# configs:
+#   graph-replayer:
+#     file: conf/graph-replayer.yml
+#     name: graph-replayer
+---
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: graph-replayer
+data:
+  config.yml: |
+    storage:
+      cls: remote
+      args:
+        url: http://storage:5002/
+        max_retries: 5
+        pool_connections: 100
+        pool_maxsize: 200
+
+    journal_client:
+      cls: kafka
+      brokers:
+        # TODO: adapt to match the right environment
+        # staging
+        - broker0.journal.staging.swh.network:9093
+        # production
+        # - broker1.journal.softwareheritage.org
+        # - broker2.journal.softwareheritage.org
+        # - broker3.journal.softwareheritage.org
+        # - broker4.journal.softwareheritage.org
+      # TODO: customize the following according to your credentials
+      sasl.username: swh-username
+      sasl.password: secretpassword
+      security.protocol: sasl_ssl
+      sasl.mechanism: SCRAM-SHA-512
+      # The prefix must match the username
+      group_id: swh-username-graph-replayer 
+      object_types:
+        - content
+        - skipped_content
+        - directory
+        - origin
+        - origin_visit
+        - origin_visit_status
+        - release
+        - revision
+        - snapshot
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: graph-replayer
+  labels:
+    app: graph-replayer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: graph-replayer
+  template:
+    metadata:
+      labels:
+        app: graph-replayer
+    spec:
+      containers:
+      - name: graph-replayer
+        image: registry.default/softwareheritage/replayer:latest
+        imagePullPolicy: Always
+        args: 
+          - graph-replayer
+        env:
+        - name: STATSD_HOST
+          value: "prometheus-statsd-exporter"
+        - name: STATSD_PORT
+          value: "9125"
+        volumeMounts:
+          - name: config
+            mountPath: /etc/softwareheritage/config.yml
+            subPath: config.yml
+            readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: graph-replayer
