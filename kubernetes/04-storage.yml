@@ -39,6 +39,9 @@ spec:
         ports:
         - containerPort: 5002
         env:
+        # Ensure the database model is adapted for the unordered mirror replication
+        - name: FLAVOR
+          value: mirror
         - name: PORT
           value: "5002"
         - name: STATSD_HOST
