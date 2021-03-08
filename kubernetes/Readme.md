@@ -36,15 +36,18 @@ Must match the content of `02-storage-db.yaml`
 ### SWH images
 
 ```
-# cd images
-# ./build_images.sh
+cd images
+./build_images.sh
 
-# docker tag softwareheritage/base:latest registry.default/softwareheritage/base:latest
-# docker push registry.default/softwareheritage/base:latest
+docker tag softwareheritage/base:latest registry.default/softwareheritage/base:latest
+docker push registry.default/softwareheritage/base:latest
 
-# docker tag softwareheritage/web:latest registry.default/softwareheritage/web:latest
-# docker push registry.default/softwareheritage/web:latest
+docker tag softwareheritage/web:latest registry.default/softwareheritage/web:latest
+docker push registry.default/softwareheritage/web:latest
 
+docker tag softwareheritage/replayer:latest registry.default/softwareheritage/replayer:latest
+docker push registry.default/softwareheritage/replayer:latest
+ 
 ```
 
 ### grafana image
@@ -52,86 +55,99 @@ Must match the content of `02-storage-db.yaml`
 This image goal is to be able to configure grafana during the startup
 
 ```
-# cd images/grafana
-# docker build --pull -t registry.default/softwareheritage/grafana .
-# docker push registry.default/softwareheritage/grafana
+cd images/grafana
+docker build --pull -t registry.default/softwareheritage/grafana .
+docker push registry.default/softwareheritage/grafana
 ```
 
-## start the objstorage
+## Configuration
 
-- start the service
+The configuration of the services is done on each dedicated files in the `kubernetes` directory. You can check which file is used for which service on the section `Start unitary service` later on this document.
+
+### What needs to be configured?
+
+#### Physical volumes
+  
+The physical volumes control where the data will be stored on your kubernetes cluster.
+The default configuration uses local directories ubder the `/srv/softwareheritage-kube` main directory.
+It can be customized for the following services :
+
+  - prometheus
+  - objstorage
+  - storage-db
+
+#### Ingress urls
+
+The ingress urls are used to expose your services. They should be configured in the ingress configuration of the following services:
+  
+  - prometheus
+  - grafana
+  - web
+  
+#### Journal configuration
+
+The journal configuration specify where to read the main data (i.e. the software heritage kafka server). If necessary the credentials should be also specified.
+
+This configuration is declared on the config maps used by the following services:
+- graph-replayer
+- content-replayer
+
+### Default configuration
+
+| type        | service    | value                                   |
+| ----------- | ---------- | --------------------------------------- |
+| PV(local)   | prometheus | `/srv/softwareheritage-kube/prometheus` |
+| PV(local)   | objstorage | `/srv/softwareheritage-kube/objstorage` |
+| PV(local)   | storage-db | `/srv/softwareheritage-kube/storage-db` |
+| ingress url | prometheus | `prometheus.default`                    |
+| ingress url | grafana    | `grafana.default`                       |
+| ingress url | webapp     | `web.default`                           |
+|kafka url | graph-replayer / content-replayer | `broker0.journal.staging.swh.network` |
+| kafka credentials |  graph-replayer / content-replayer | `swh-username` / `secretpassword` |
+| Consumer group | graph-replayer | `swh-username-graph-replayer` |
+| Consumer group | content-replayer | `swh-username-content-replayer` |
+
+
+## Launch the mirror
+
+### Start the complete stack
+
 ```
-# cd kubernetes
-
-# kubectl apply -f 01-objstorage.yml
-configmap/objstorage created
-persistentvolume/objstorage-pv created
-persistentvolumeclaim/objstorage-pvc created
-deployment.apps/objstorage created
-service/objstorage created
-```
-- test it
-From a node of the cluster :
-```
-# kubectl get pods
-NAME                                   READY   STATUS    RESTARTS   AGE
-registry-deployment-7595868dc8-657ps   1/1     Running   0          46m
-objstorage-8587d58b68-76jbn            1/1     Running   0          12m
-
-# kubectl get services objstorage
-NAME         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
-objstorage   ClusterIP   10.43.185.191   <none>        5003/TCP   17m
-
-# curl http://$(kubectl get services objstorage -o jsonpath='{.spec.clusterIP}'):5003
-SWH Objstorage API server%  
-```
-## Start the storage
-
-- Start the db
-```
-# cd kubernetes
-
-# kubectl apply -f 02-storage-db.yml
-persistentvolume/storage-db-pv created
-persistentvolumeclaim/storage-db-pvc created
-secret/storage-db created
-configmap/storage-db created
-deployment.apps/storage-db created
-service/storage-db created
-
-# kubectl get pods
-NAME                                   READY   STATUS    RESTARTS   AGE
-registry-deployment-7595868dc8-657ps   1/1     Running   0          46m
-objstorage-8587d58b68-76jbn            1/1     Running   0          15m
-storage-db-64b7f8b684-48n7w            1/1     Running   0          4m52s
-
-# kubectl get services storage-db
-NAME         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
-storage-db   ClusterIP   10.43.213.178   <none>        5432/TCP   8m19s
-```
-- Start the storage
-```
-# cd kubernetes
-
-# kubectl apply -f 03-storage.yml
-configmap/storage created
-deployment.apps/storage created
-service/storage created
+cd kubernetes
+kubectl apply -f .
 ```
 
-- Test the service
-From a node of the cluster :
-```
-# kubectl get pods
-NAME                                   READY   STATUS    RESTARTS   AGE
-registry-deployment-7595868dc8-657ps   1/1     Running   0          49m
-storage-db-64b7f8b684-48n7w            1/1     Running   0          7m40s
-storage-6b759fb974-w9rzj               1/1     Running   0          66s
+### Start unitary service
 
+The configuration is split in the following files :
+
+| File                   | Services                                                     |
+| ---------------------- | ------------------------------------------------------------ |
+| 01-prometheus.yaml     | <ul><li>prometheus</li><li>grafana</li></ul>                 |
+| 02-objstorage.yaml     | <ul><li>object storage (swh-objstorage)</li></ul>            |
+| 03-storage-db.yaml     | <ul><li>storage database (postgresql)</li></ul>              |
+| 04-storage.yaml        | <ul><li>storage (swh-storage)</li></ul>                      |
+| 05-web.yaml            | <ul><li>Webapp (swh-web)</li></ul>                           |
+| 10-graph-replayer.yaml | <ul><li>Graph replayer (swh-storage)</li></ul>               |
+| 11-graph-replayer      | <ul><li>Content replayer (swh-objstorage-replayer)</li></ul> |
+
+To deploy one file content individually, use the following command :
+
+```bash
+kubectl apply -f <filename>
+```
+
+### Test a service
+
+- From a node of the cluster, list the available services:
+```
 # kubectl get services storage
 NAME      TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
 storage   ClusterIP   10.43.212.116   <none>        5002/TCP   2m24s
+```
 
+- Call the service from the cluster ip:
+```
 # curl http://$(kubectl get services storage -o jsonpath='{.spec.clusterIP}'):5002
 <html>
 <head><title>Software Heritage storage server</title></head>
@@ -146,13 +162,22 @@ and API</a> for more information</p>
 </html>
 ```
 
+## Cleanup the environment
+
+In the `kubernetes` directory:
+```
+kubectl delete -f .
+```
+It destroys the deployed components but keep the data intact (default on the `/srv/sofwareheritage-kube/` directory)
+
+The services can be deployed one by one by specifying the yaml name, for example:
+```bash
+kubectl delete -f 04-storage.yaml
+```
 # TODOs
 
 - [ ] registry persistence
 - [ ] storage for sqlite database for web
 - [ ] prometheus exporter
-- [ ] prometheus
-- [ ] grafana
-- [ ] graph replayer
-- [ ] content replayer
 - [ ] clustered configuration
+- [ ] Create a helm charts
