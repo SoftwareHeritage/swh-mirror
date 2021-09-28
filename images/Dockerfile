@@ -76,6 +76,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
   apt-get install -y --no-install-recommends \
     -t $(lsb_release -sc)-backports \
 	gunicorn \
+	postgresql-client \
 	python3-magic \
     python3-swh.web \
 	&& \
