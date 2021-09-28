@@ -22,11 +22,11 @@ case "$1" in
     "graph-replayer")
 		wait-for-it storage:5002
         echo "Starting the SWH mirror graph replayer"
-        exec sh -c "trap : TERM INT; while :; do swh --log-level ${LOG_LEVEL:-WARNING} storage replay; done"
+        exec swh --log-level ${LOG_LEVEL:-WARNING} storage replay
         ;;
     "content-replayer")
 		wait-for-it objstorage:5003
         echo "Starting the SWH mirror content replayer"
-        exec sh -c "trap : TERM INT; while :; do swh --log-level ${LOG_LEVEL:-WARNING} objstorage replay; done"
+        exec swh --log-level ${LOG_LEVEL:-WARNING} objstorage replay
         ;;
 esac
