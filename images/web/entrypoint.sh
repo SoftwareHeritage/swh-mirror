@@ -18,6 +18,8 @@ if [ "$1" = 'shell' ] ; then
 		"$@"
 	fi
 else
+    wait_pgsql
+
 	create_admin_script="
 from django.contrib.auth import get_user_model;
 
@@ -45,7 +47,7 @@ if not User.objects.filter(username = username).exists():
          --threads 2 \
          --workers 2 \
          --timeout 3600 \
+         --access-logfile '-' \
+         --config 'python:swh.web.gunicorn_config' \
          'django.core.wsgi:get_wsgi_application()'
-	# give some time to log in and check a few things before dying
-	sleep 180
 fi

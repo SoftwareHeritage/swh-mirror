@@ -17,6 +17,9 @@ port=5432
 user=${PGUSER}
 EOF
     chmod 0600 ~/.pgpass
+	echo "DONE setup Postgresql client config file"
+	echo "cat ~/.pg_service.conf"
+	cat ~/.pg_service.conf
 }
 
 wait_pgsql () {

@@ -15,7 +15,7 @@ services:
           - node.role == manager
     command: ['-c', 'shared_buffers=4GB', '-c', 'effective_cache_size=4GB', '-c', 'random_page_cost=1.5', '-c', 'max_wal_size=4GB']
     environment:
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-storage-password
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
       POSTGRES_USER: swh
       POSTGRES_DB:
       # unset POSTGRES_DB: we're handling db creation ourselves in the backend
@@ -23,6 +23,7 @@ services:
       - "storage-db:/var/lib/postgresql/data:rw,Z"
     secrets:
       - source: postgres-storage-password
+        target: postgres-password
         uid: '999'
         mode: 0400
 
@@ -35,14 +36,14 @@ services:
           - node.role == manager
     command: ['-c', 'shared_buffers=4GB', '-c', 'effective_cache_size=4GB', '-c', 'random_page_cost=1.5', '-c', 'max_wal_size=4GB']
     environment:
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-web-password
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
       POSTGRES_USER: swh
-      POSTGRES_DB:
-      # unset POSTGRES_DB: we're handling db creation ourselves in the backend
+      POSTGRES_DB: swh-web
     volumes:
       - "web-db:/var/lib/postgresql/data:rw,Z"
     secrets:
       - source: postgres-web-password
+        target: postgres-password
         uid: '999'
         mode: 0400
 
@@ -62,6 +63,7 @@ services:
       - memcache
     secrets:
       - source: postgres-web-password
+        target: postgres-password
         mode: 0400
 
   objstorage:
@@ -98,6 +100,7 @@ services:
       - db-storage
     secrets:
       - source: postgres-storage-password
+        target: postgres-password
         mode: 0400
 
   nginx:
