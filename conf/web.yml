@@ -36,6 +36,9 @@ debug: yes
 
 serve_assets: yes
 
+production_db:
+  name: postgresql:///?service=swh
+
 throttling:
   cache_uri: 127.0.0.1:11211
   scopes:
@@ -66,4 +69,3 @@ throttling:
         - 0.0.0.0/0
 
 search: {}
-

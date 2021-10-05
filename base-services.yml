@@ -7,7 +7,7 @@ services:
       replicas: 1
 
   db-storage:
-    image: postgres:12
+    image: postgres:13
     deploy:
       mode: global
       placement:
@@ -15,14 +15,34 @@ services:
           - node.role == manager
     command: ['-c', 'shared_buffers=4GB', '-c', 'effective_cache_size=4GB', '-c', 'random_page_cost=1.5', '-c', 'max_wal_size=4GB']
     environment:
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-storage-password
       POSTGRES_USER: swh
       POSTGRES_DB:
       # unset POSTGRES_DB: we're handling db creation ourselves in the backend
     volumes:
-      - "storage:/var/lib/postgresql/data:rw,Z"
+      - "storage-db:/var/lib/postgresql/data:rw,Z"
     secrets:
-      - source: postgres-password
+      - source: postgres-storage-password
+        uid: '999'
+        mode: 0400
+
+  db-web:
+    image: postgres:13
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.role == manager
+    command: ['-c', 'shared_buffers=4GB', '-c', 'effective_cache_size=4GB', '-c', 'random_page_cost=1.5', '-c', 'max_wal_size=4GB']
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-web-password
+      POSTGRES_USER: swh
+      POSTGRES_DB:
+      # unset POSTGRES_DB: we're handling db creation ourselves in the backend
+    volumes:
+      - "web-db:/var/lib/postgresql/data:rw,Z"
+    secrets:
+      - source: postgres-web-password
         uid: '999'
         mode: 0400
 
@@ -34,8 +54,15 @@ services:
     command: serve
     environment:
       PORT: "5004"
+      PGHOST: db-web
+      PGUSER: swh
+      POSTGRES_DB: swh-web
     depends_on:
+      - db-web
       - memcache
+    secrets:
+      - source: postgres-web-password
+        mode: 0400
 
   objstorage:
     image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
@@ -70,7 +97,7 @@ services:
     depends_on:
       - db-storage
     secrets:
-      - source: postgres-password
+      - source: postgres-storage-password
         mode: 0400
 
   nginx:
@@ -117,10 +144,13 @@ services:
 
 volumes:
   objstorage:
-  storage:
+  storage-db:
+  web-db:
 
 secrets:
-  postgres-password:
+  postgres-storage-password:
+    external: true
+  postgres-web-password:
     external: true
 
 configs:

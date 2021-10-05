@@ -2,7 +2,23 @@
 
 set -e
 
-create_admin_script="
+source /srv/softwareheritage/utils/pgsql.sh
+
+# generate the pgservice file if any
+if [ -f /run/secrets/postgres-password ]; then
+	POSTGRES_PASSWORD_FILE=/run/secrets/postgres-password
+	setup_pgsql
+fi
+
+if [ "$1" = 'shell' ] ; then
+	shift
+	if (( $# == 0)); then
+		exec bash -i
+	else
+		"$@"
+	fi
+else
+	create_admin_script="
 from django.contrib.auth import get_user_model;
 
 username = 'admin';
@@ -15,22 +31,6 @@ if not User.objects.filter(username = username).exists():
     User.objects.create_superuser(username, email, password);
 "
 
-# generate the config file from the 'template'
-if [ -f /etc/softwareheritage/config.yml.tmpl ]; then
-    # I know... I know!
-    eval "echo \"`cat /etc/softwareheritage/config.yml.tmpl`\"" > \
-         /etc/softwareheritage/config.yml
-fi
-
-if [ "$1" = 'shell' ] ; then
-	shift
-	if (( $# == 0)); then
-		exec bash -i
-	else
-		"$@"
-	fi
-else
-
     echo "Migrating db using ${DJANGO_SETTINGS_MODULE}"
     django-admin migrate --settings=${DJANGO_SETTINGS_MODULE}
 
@@ -39,12 +39,13 @@ else
 
 	echo "starting the swh-web server"
 	mkdir -p /var/run/gunicorn/swh/web
-    exec gunicorn3 \
+    gunicorn3 \
 		 --bind 0.0.0.0:5004 \
          --bind unix:/var/run/gunicorn/swh/web/sock \
          --threads 2 \
          --workers 2 \
          --timeout 3600 \
          'django.core.wsgi:get_wsgi_application()'
-
+	# give some time to log in and check a few things before dying
+	sleep 180
 fi
