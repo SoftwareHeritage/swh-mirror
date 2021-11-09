@@ -247,7 +247,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(swh_content_replayer_duration_seconds_sum[5m])",
+          "expr": "rate(swh_content_replayer_duration_seconds_sum[5m])/rate(swh_content_replayer_duration_seconds_count[5m])",
           "legendFormat": "{{request}}",
           "refId": "A"
         }
