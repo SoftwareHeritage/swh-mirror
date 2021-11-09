@@ -19,7 +19,7 @@ fi
 
 # For debugging purpose
 echo "### CONFIG FILE ###"
-cat /etc/softwareheritage/config.yml
+cat /etc/softwareheritage/config.yml | grep -v password
 echo "###################"
 
 echo "Arguments: $@"
@@ -34,10 +34,12 @@ case "$1" in
            --bind 0.0.0.0:${PORT:-5000} \
            --bind unix:/var/run/gunicorn/swh/$1.sock \
            --worker-class aiohttp.worker.GunicornWebWorker \
-           --threads 4 \
-           --workers 2 \
+           --threads ${GUNICORN_THREADS:-4} \
+           --workers ${GUNICORN_WORKERS:-16} \
            --log-level "${LOG_LEVEL:-WARNING}" \
-           --timeout 3600 \
+           --timeout ${GUNICORN_TIMEOUT:-3600} \
+           --statsd-host=prometheus-statsd-exporter:9125 \
+           --statsd-prefix=service.app.objstorage  \
            "swh.$1.api.server:make_app_from_configfile()"
       ;;
     *)
@@ -55,10 +57,12 @@ case "$1" in
       exec gunicorn3 \
            --bind 0.0.0.0:${PORT:-5000} \
            --bind unix:/var/run/gunicorn/swh/$1.sock \
-           --threads 4 \
-           --workers 2 \
+           --threads ${GUNICORN_THREADS:-4} \
+           --workers ${GUNICORN_WORKERS:-16} \
            --log-level "${LOG_LEVEL:-WARNING}" \
-           --timeout 3600 \
+           --timeout ${GUNICORN_TIMEOUT:-3600} \
+           --statsd-host=prometheus-statsd-exporter:9125 \
+           --statsd-prefix=service.app.storage  \
            "swh.$1.api.server:make_app_from_configfile()"
       ;;
 esac
