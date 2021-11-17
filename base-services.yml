@@ -69,7 +69,15 @@ services:
   objstorage:
     image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
     deploy:
+      # needed to allow actual and dynammic load balancing
+      endpoint_mode: dnsrr
+      # a real life replicas value better be in the 16 to 64 range
+      replicas: 2
       placement:
+        # note: if using a local volume, you need to stick objstorage instances
+        # on the node hosting the volume, eg. the manager, otherwise, if using
+        # a remote/distrubuted objstorage backend (seaweedfs, cloud, etc.) you
+        # want to remove this placement constraint
         constraints:
           - node.role == manager
     volumes:
@@ -85,6 +93,11 @@ services:
 
   storage:
     image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
+    deploy:
+      # needed to allow actual and dynammic load balancing
+      endpoint_mode: dnsrr
+      # a real life replicas value better be in the 16 to 64 range
+      replicas: 2
     configs:
       - source: storage
         target: /etc/softwareheritage/config.yml
