@@ -25,3 +25,9 @@ defaults:
     - 2700
     - 3600
     - 7200
+  ttl: 24h
+  
+mappings:
+- match: "swh_journal_client_status"
+  name: "swh_journal_client_status"
+  ttl: 10m
