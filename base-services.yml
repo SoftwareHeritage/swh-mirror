@@ -22,7 +22,7 @@ services:
     volumes:
       - "storage-db:/var/lib/postgresql/data:rw,Z"
     secrets:
-      - source: postgres-storage-password
+      - source: swh-mirror-db-postgres-password
         target: postgres-password
         uid: '999'
         mode: 0400
@@ -42,7 +42,7 @@ services:
     volumes:
       - "web-db:/var/lib/postgresql/data:rw,Z"
     secrets:
-      - source: postgres-web-password
+      - source: swh-mirror-web-postgres-password
         target: postgres-password
         uid: '999'
         mode: 0400
@@ -62,7 +62,7 @@ services:
       - db-web
       - memcache
     secrets:
-      - source: postgres-web-password
+      - source: swh-mirror-web-postgres-password
         target: postgres-password
         mode: 0400
 
@@ -112,7 +112,7 @@ services:
     depends_on:
       - db-storage
     secrets:
-      - source: postgres-storage-password
+      - source: swh-mirror-db-postgres-password
         target: postgres-password
         mode: 0400
 
@@ -164,9 +164,9 @@ volumes:
   web-db:
 
 secrets:
-  postgres-storage-password:
+  swh-mirror-db-postgres-password:
     external: true
-  postgres-web-password:
+  swh-mirror-web-postgres-password:
     external: true
 
 configs:
