@@ -1,28 +1,23 @@
 storage:
   cls: remote
-  args:
-    url: http://storage:5002/
-    timeout: 1
+  url: http://storage:5002/
+  timeout: 5
 
 objstorage:
   cls: remote
-  args:
-    url: http://objstorage:5003/
+  url: http://objstorage:5003/
 
 indexer_storage:
   cls: remote
-  args:
-    url: http://indexer-storage:5007/
+  url: http://indexer-storage:5007/
 
 scheduler:
   cls: remote
-  args:
-    url: http://scheduler:5008/
+  url: http://scheduler:5008/
 
 vault:
   cls: remote
-  args:
-    url: http://vault:5005/
+  url: http://vault:5005/
 
 deposit:
   private_api_url: https://deposit:5006/1/private/
