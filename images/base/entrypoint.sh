@@ -51,6 +51,7 @@ case "$1" in
           swh db create --db-name ${POSTGRES_DB} storage
       fi
       echo Initializing the database...
+      swh db init-admin --db-name ${POSTGRES_DB} storage
       swh db init --db-name ${POSTGRES_DB} --flavor ${FLAVOR:-default} storage
 
       echo "Starting the SWH $1 RPC server"
