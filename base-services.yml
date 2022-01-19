@@ -105,6 +105,7 @@ services:
       PGHOST: db-storage
       PGUSER: swh
       POSTGRES_DB: swh-storage
+      FLAVOR: mirror
       PORT: "5002"
       STATSD_HOST: prometheus-statsd-exporter
       STATSD_PORT: 9125

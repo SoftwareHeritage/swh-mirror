@@ -2,9 +2,6 @@
 version: '3.7'
 
 services:
-  storage:
-    environment:
-      FLAVOR: mirror
   graph-replayer:
     image: softwareheritage/replayer:${SWH_IMAGE_TAG:-latest}
     environment:
