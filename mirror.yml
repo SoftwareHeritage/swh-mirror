@@ -173,6 +173,42 @@ services:
     volumes:
       - redis:/data
 
+  graph-replayer:
+    image: softwareheritage/replayer:${SWH_IMAGE_TAG:-latest}
+    deploy:
+      # do not start replayers by default
+      replicas: 0
+    environment:
+      STATSD_HOST: prometheus-statsd-exporter
+      STATSD_PORT: 9125
+      STATSD_TAGS: 'role:content-replayer,hostname:${HOSTNAME}'
+    configs:
+      - source: graph-replayer
+        target: /etc/softwareheritage/config.yml
+    command:
+      - graph-replayer
+    depends_on:
+      - storage
+      - redis
+
+  content-replayer:
+    image: softwareheritage/replayer:${SWH_IMAGE_TAG:-latest}
+    deploy:
+      # do not start replayers by default
+      replicas: 0
+    environment:
+      STATSD_HOST: prometheus-statsd-exporter
+      STATSD_PORT: 9125
+      STATSD_TAGS: 'role:content-replayer,hostname:${HOSTNAME}'
+    configs:
+      - source: content-replayer
+        target: /etc/softwareheritage/config.yml
+    command:
+      - content-replayer
+    depends_on:
+      - objstorage
+      - redis
+
 volumes:
   objstorage:
   storage-db:
@@ -197,3 +233,9 @@ configs:
   web:
     file: conf/web.yml
     name: web
+  content-replayer:
+    file: conf/content-replayer.yml
+    name: content-replayer
+  graph-replayer:
+    file: conf/graph-replayer.yml
+    name: graph-replayer
