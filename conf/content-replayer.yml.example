@@ -1,10 +1,9 @@
-objstorage_src:
+objstorage:
   cls: remote
-  args:
-    url: http://storage0.euwest.azure.internal.softwareheritage.org:5003
-    max_retries: 5
-    pool_connections: 100
-    pool_maxsize: 200
+  url: http://storage0.euwest.azure.internal.softwareheritage.org:5003
+  max_retries: 5
+  pool_connections: 100
+  pool_maxsize: 200
 
 objstorage_dst:
   cls: remote
@@ -17,8 +16,13 @@ journal_client:
     - kafka1
     - kafka2
     - kafka3
-  group_id: test-content-replayer-x-change-me
-  # sasl.username: XXX
-  # sasl.password: XXX
-  # security.protocol: sasl_ssl
-  # sasl.mechanism: SCRAM-SHA-512
+  group_id: test-user-content-replayer-x-change-me
+  sasl.username: test-user
+  sasl.password: change-me
+  security.protocol: sasl_ssl
+  sasl.mechanism: SCRAM-SHA-512
+  session.timeout.ms: 600000
+  max.poll.interval.ms: 3600000
+  message.max.bytes: 1000000000
+  privileged: true
+  batch_size: 2000

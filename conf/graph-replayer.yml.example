@@ -1,6 +1,13 @@
 storage:
-  cls: remote
-  args:
+  cls: pipeline
+  step:
+  - cls: filter
+  - cls: tenacious
+    error_rate_limit:
+      # fail after 10 errors for 1000 operations
+      errors: 10
+      window_size: 1000
+  - cls: remote
     url: http://storage:5002/
     max_retries: 5
     pool_connections: 100
@@ -12,11 +19,14 @@ journal_client:
     - kafka1
     - kafka2
     - kafka3
-  group_id: test-graph-replayer-x-change-me
-  # sasl.username: XXX
-  # sasl.password: XXX
-  # security.protocol: sasl_ssl
-  # sasl.mechanism: SCRAM-SHA-512
+  group_id: test-user-graph-replayer-x-change-me
+  sasl.username: test-user
+  sasl.password: change-me
+  security.protocol: sasl_ssl
+  sasl.mechanism: SCRAM-SHA-512
+  session.timeout.ms: 600000
+  max.poll.interval.ms: 3600000
+  message.max.bytes: 1000000000
   object_types:
     - content
     - skipped_content
@@ -27,3 +37,4 @@ journal_client:
     - release
     - revision
     - snapshot
+  privileged: true
