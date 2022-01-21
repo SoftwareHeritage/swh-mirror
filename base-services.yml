@@ -159,6 +159,20 @@ services:
       - "./conf/grafana/provisioning:/etc/grafana/provisioning:ro,Z"
       - "./conf/grafana/dashboards:/var/lib/grafana/dashboards:rw,Z"
 
+  redis:
+    image: redis:6.2.6
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.labels.org.softwareheritage.mirror.volumes.redis == true
+    command:
+      - redis-server
+      - --save 60 1
+      - --loglevel warning
+    volumes:
+      - redis:/data
+
 volumes:
   objstorage:
   storage-db:

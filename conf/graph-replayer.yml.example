@@ -38,3 +38,11 @@ journal_client:
     - revision
     - snapshot
   privileged: true
+
+replayer:
+  error_reporter:
+    # used to track objects that the replayer really failed at storing in the
+    # storage
+    host: redis
+    port: 6379
+    db: 0

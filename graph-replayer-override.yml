@@ -14,6 +14,7 @@ services:
       - graph-replayer
     depends_on:
       - storage
+      - redis
 
 configs:
   graph-replayer:
