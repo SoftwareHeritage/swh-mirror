@@ -1,4 +1,4 @@
-version: "3.7"
+version: "3.8"
 
 services:
   memcache:
@@ -11,8 +11,10 @@ services:
     # the main storage database
     image: postgres:13
     deploy:
-      mode: global
+      # we want only one replica of this service in the whole cluster
+      replicas: 1
       placement:
+        max_replicas_per_node: 1
         constraints:
           - node.labels.org.softwareheritage.mirror.volumes.storage-db == true
     command: ['-c', 'shared_buffers=4GB', '-c', 'effective_cache_size=4GB', '-c', 'random_page_cost=1.5', '-c', 'max_wal_size=4GB']
@@ -33,8 +35,10 @@ services:
     # the database for the web application
     image: postgres:13
     deploy:
-      mode: global
+      # we want only one replica of this service in the whole cluster
+      replicas: 1
       placement:
+        max_replicas_per_node: 1
         constraints:
           - node.labels.org.softwareheritage.mirror.volumes.web-db == true
     command: ['-c', 'shared_buffers=4GB', '-c', 'effective_cache_size=4GB', '-c', 'random_page_cost=1.5', '-c', 'max_wal_size=4GB']
@@ -133,9 +137,7 @@ services:
     ports:
       - "5081:5081/tcp"
     deploy:
-      placement:
-        constraints:
-          - node.role == manager
+      mode: global
 
   prometheus:
     image: prom/prometheus
@@ -149,7 +151,12 @@ services:
       - source: prometheus
         target: /etc/prometheus/prometheus.yml
     deploy:
-      mode: global
+      # we want only one replica of this service in the whole cluster
+      replicas: 1
+      placement:
+        max_replicas_per_node: 1
+        constraints:
+          - node.labels.org.softwareheritage.mirror.monitoring == true
 
   prometheus-statsd-exporter:
     image: prom/statsd-exporter
@@ -158,6 +165,13 @@ services:
     configs:
       - source: prometheus-statsd-exporter
         target: /etc/prometheus/statsd-mapping.yml
+    deploy:
+      # we want only one replica of this service in the whole cluster
+      replicas: 1
+      placement:
+        max_replicas_per_node: 1
+        constraints:
+          - node.labels.org.softwareheritage.mirror.monitoring == true
 
   grafana:
     image: grafana/grafana
@@ -166,22 +180,31 @@ services:
     environment:
       GF_SERVER_ROOT_URL: http://localhost:5081/grafana
     configs:
-      - source: grafana-datasources-prometheus
+      - source: grafana-provisioning-datasources-prometheus
         target: /etc/grafana/provisioning/datasources/prometheus.yaml
-      - source: grafana-datasources-all
-        target: /etc/grafana/provisioning/datasources/all.yaml
-      - source: grafana-dahsboards-backend-stats
+      - source: grafana-provisioning-dashboards-all
+        target: /etc/grafana/provisioning/dashboards/all.yaml
+      - source: grafana-dashboards-backend-stats
         target: /var/lib/grafana/dashboards/backend-stats.json
-      - source: grafana-dahsboards-content-replayer
+      - source: grafana-dashboards-content-replayer
         target: /var/lib/grafana/dashboards/content-replayer.json
-      - source: grafana-dahsboards-graph-replayer
+      - source: grafana-dashboards-graph-replayer
         target: /var/lib/grafana/dashboards/graph-replayer.json
+    deploy:
+      # we want only one replica of this service in the whole cluster
+      replicas: 1
+      placement:
+        max_replicas_per_node: 1
+        constraints:
+          - node.labels.org.softwareheritage.mirror.monitoring == true
 
   redis:
     image: redis:6.2.6
     deploy:
-      mode: global
+      # we want only one replica of this service in the whole cluster
+      replicas: 1
       placement:
+        max_replicas_per_node: 1
         constraints:
           - node.labels.org.softwareheritage.mirror.volumes.redis == true
     command:
@@ -236,6 +259,7 @@ volumes:
   objstorage:
   storage-db:
   web-db:
+  redis:
 
 secrets:
   swh-mirror-db-postgres-password:
@@ -260,10 +284,10 @@ configs:
     file: conf/prometheus.yml
   prometheus-statsd-exporter:
     file: conf/prometheus-statsd-mapping.yml
-  grafana-datasources-prometheus:
+  grafana-provisioning-datasources-prometheus:
     file: conf/grafana/provisioning/datasources/prometheus.yaml
-  grafana-datasources-all:
-    file: conf/grafana/provisioning/datasources/all.yaml
+  grafana-provisioning-dashboards-all:
+    file: conf/grafana/provisioning/dashboards/all.yaml
   grafana-dashboards-graph-replayer:
     file: conf/grafana/dashboards/graph-replayer.json
   grafana-dashboards-content-replayer:
