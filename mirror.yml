@@ -145,8 +145,9 @@ services:
       # Needed for the reverse-proxy
       - "--web.external-url=/prometheus"
       - "--config.file=/etc/prometheus/prometheus.yml"
-    volumes:
-      - "./conf/prometheus.yml:/etc/prometheus/prometheus.yml:ro,Z"
+    configs:
+      - source: prometheus
+        target: /etc/prometheus/prometheus.yml
     deploy:
       mode: global
 
@@ -154,8 +155,9 @@ services:
     image: prom/statsd-exporter
     command:
       - "--statsd.mapping-config=/etc/prometheus/statsd-mapping.yml"
-    volumes:
-      - "./conf/prometheus-statsd-mapping.yml:/etc/prometheus/statsd-mapping.yml:ro,Z"
+    configs:
+      - source: prometheus-statsd-exporter
+        target: /etc/prometheus/statsd-mapping.yml
 
   grafana:
     image: grafana/grafana
@@ -163,9 +165,17 @@ services:
     - prometheus
     environment:
       GF_SERVER_ROOT_URL: http://localhost:5081/grafana
-    volumes:
-      - "./conf/grafana/provisioning:/etc/grafana/provisioning:ro,Z"
-      - "./conf/grafana/dashboards:/var/lib/grafana/dashboards:rw,Z"
+    configs:
+      - source: grafana-datasources-prometheus
+        target: /etc/grafana/provisioning/datasources/prometheus.yaml
+      - source: grafana-datasources-all
+        target: /etc/grafana/provisioning/datasources/all.yaml
+      - source: grafana-dahsboards-backend-stats
+        target: /var/lib/grafana/dashboards/backend-stats.json
+      - source: grafana-dahsboards-content-replayer
+        target: /var/lib/grafana/dashboards/content-replayer.json
+      - source: grafana-dahsboards-graph-replayer
+        target: /var/lib/grafana/dashboards/graph-replayer.json
 
   redis:
     image: redis:6.2.6
@@ -236,19 +246,27 @@ secrets:
 configs:
   storage:
     file: conf/storage.yml
-    name: storage
   objstorage:
     file: conf/objstorage.yml
-    name: objstorage
   nginx:
     file: conf/nginx.conf
-    name: nginx
   web:
     file: conf/web.yml
-    name: web
   content-replayer:
     file: conf/content-replayer.yml
-    name: content-replayer
   graph-replayer:
     file: conf/graph-replayer.yml
-    name: graph-replayer
+  prometheus:
+    file: conf/prometheus.yml
+  prometheus-statsd-exporter:
+    file: conf/prometheus-statsd-mapping.yml
+  grafana-datasources-prometheus:
+    file: conf/grafana/provisioning/datasources/prometheus.yaml
+  grafana-datasources-all:
+    file: conf/grafana/provisioning/datasources/all.yaml
+  grafana-dashboards-graph-replayer:
+    file: conf/grafana/dashboards/graph-replayer.json
+  grafana-dashboards-content-replayer:
+    file: conf/grafana/dashboards/content-replayer.json
+  grafana-dashboards-backend-stats:
+    file: conf/grafana/dashboards/backend-stats.json
