@@ -5,9 +5,11 @@ setup_pgsql () {
     : > ~/.pg_service.conf
 
 	PGPASSWORD=$(cat $POSTGRES_PASSWORD_FILE)
-    echo "${PGHOST}:5432:template1:${PGUSER}:${PGPASSWORD}" >> ~/.pgpass
-    echo "${PGHOST}:5432:${PGUSER}:${PGUSER}:${PGPASSWORD}" >> ~/.pgpass
-    echo "${PGHOST}:5432:${POSTGRES_DB}:${PGUSER}:${PGPASSWORD}" >> ~/.pgpass
+	cat > ~/.pgpass <<EOF
+${PGHOST}:5432:template1:${PGUSER}:${PGPASSWORD}
+${PGHOST}:5432:${PGUSER}:${PGUSER}:${PGPASSWORD}
+${PGHOST}:5432:${POSTGRES_DB}:${PGUSER}:${PGPASSWORD}
+EOF
 
     cat > ~/.pg_service.conf <<EOF
 [swh]
