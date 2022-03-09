@@ -1,8 +1,6 @@
 storage:
-  cls: local
-  args:
-    db: postgresql:///?service=swh
-    objstorage:
-      cls: remote
-      args:
-        url: http://objstorage:5003/
+  cls: postgresql
+  db: postgresql:///?service=swh
+  objstorage:
+    cls: remote
+    url: http://objstorage:5003/

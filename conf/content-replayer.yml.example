@@ -7,8 +7,7 @@ objstorage:
 
 objstorage_dst:
   cls: remote
-  args:
-    url: http://objstorage:5003
+  url: http://objstorage:5003
 
 journal_client:
   cls: kafka
