@@ -28,31 +28,20 @@ case "$1" in
     "shell")
       exec bash -i
       ;;
-    "objstorage")
-      echo "Starting the SWH $1 RPC server"
-      exec gunicorn3 \
-           --bind 0.0.0.0:${PORT:-5000} \
-           --bind unix:/var/run/gunicorn/swh/$1.sock \
-           --worker-class aiohttp.worker.GunicornWebWorker \
-           --threads ${GUNICORN_THREADS:-4} \
-           --workers ${GUNICORN_WORKERS:-16} \
-           --log-level "${LOG_LEVEL:-WARNING}" \
-           --timeout ${GUNICORN_TIMEOUT:-3600} \
-           --statsd-host=prometheus-statsd-exporter:9125 \
-           --statsd-prefix=service.app.objstorage  \
-           "swh.$1.api.server:make_app_from_configfile()"
-      ;;
     *)
-      wait_pgsql template1
+	  if [ -v POSTGRES_DB ]; then
+        wait_pgsql template1
 
-      echo Database setup
-      if ! check_pgsql_db_created; then
+        echo Database setup
+        if ! check_pgsql_db_created; then
           echo Creating database and extensions...
-          swh db create --db-name ${POSTGRES_DB} storage
-      fi
-      echo Initializing the database...
-      swh db init-admin --db-name ${POSTGRES_DB} storage
-      swh db init --db-name ${POSTGRES_DB} --flavor ${FLAVOR:-default} storage
+          swh db create --db-name ${POSTGRES_DB} $1
+        fi
+        echo Initializing the database...
+        swh db init-admin --db-name ${POSTGRES_DB} $1
+        swh db init --flavor ${FLAVOR:-default} $1
+	    swh db upgrade $1
+	  fi
 
       echo "Starting the SWH $1 RPC server"
       exec gunicorn3 \
@@ -63,7 +52,7 @@ case "$1" in
            --log-level "${LOG_LEVEL:-WARNING}" \
            --timeout ${GUNICORN_TIMEOUT:-3600} \
            --statsd-host=prometheus-statsd-exporter:9125 \
-           --statsd-prefix=service.app.storage  \
+           --statsd-prefix=service.app.$1  \
            "swh.$1.api.server:make_app_from_configfile()"
       ;;
 esac
