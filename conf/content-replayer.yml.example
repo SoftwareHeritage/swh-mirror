@@ -30,7 +30,7 @@ journal_client:
 replayer:
   error_reporter:
     # used to track objects that the replayer really failed at replication from
-    # the soure objstorage to the destination one
+    # the source objstorage to the destination one
     host: redis
     port: 6379
     db: 0

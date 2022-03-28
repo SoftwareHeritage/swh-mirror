@@ -219,10 +219,10 @@ services:
     deploy:
       # do not start replayers by default once the remainig of the stack is
       # running as expected, bump this value; expected real-life values should
-      # be someting in the range [16, 64] (staging) or [16, 256] (prodiction)
+      # be something in the range [16, 64] (staging) or [16, 256] (prodiction)
       # depending on your hardware capabilities; note that there is no need of
       # going above the number of partitions on the kafka cluster (so the 64
-      # adn 254 upper limits depending on the execution environment).
+      # and 254 upper limits depending on the execution environment).
       replicas: 0
     environment:
       STATSD_HOST: prometheus-statsd-exporter
