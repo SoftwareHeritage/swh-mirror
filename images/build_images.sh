@@ -7,16 +7,16 @@ builddatetime="${builddate}-${buildtime}"
 username=$(docker info | grep Username | awk '{print $2}')
 
 for img in base web replayer; do
-	docker build \
-		   --build-arg SWH_VER=${builddatetime} \
-		   --build-arg debianversion=buster \
-		   --tag softwareheritage/${img}:${builddatetime} \
-		   --target swh-${img} \
-		   .
-	docker tag softwareheritage/${img}:${builddatetime} softwareheritage/${img}:${builddate}
-	docker tag softwareheritage/${img}:${builddate} softwareheritage/${img}:latest
+    docker build \
+           --build-arg SWH_VER=${builddatetime} \
+           --build-arg debianversion=buster \
+           --tag softwareheritage/${img}:${builddatetime} \
+           --target swh-${img} \
+           .
+    docker tag softwareheritage/${img}:${builddatetime} softwareheritage/${img}:${builddate}
+    docker tag softwareheritage/${img}:${builddate} softwareheritage/${img}:latest
   if [[ -n "${username}" ]] && [[ "${PUBLISH:=no}" = "yes" ]]; then
-	  echo "Publishing image softwareheritage:${img}-${builddate} on docker hub"
+      echo "Publishing image softwareheritage:${img}-${builddate} on docker hub"
       docker push softwareheritage/${img}:${builddatetime}
       docker push softwareheritage/${img}:${builddate}
       docker push softwareheritage/${img}:latest
