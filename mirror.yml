@@ -83,7 +83,7 @@ services:
       # needed to allow actual and dynamic load balancing
       endpoint_mode: dnsrr
       # a real life replicas value better be in the 16 to 64 range
-      replicas: 2
+      replicas: 1
       placement:
         # note: if using a local volume, you need to pin the objstorage
         # instances on the node hosting the volume, eg. the manager, otherwise,
@@ -109,7 +109,10 @@ services:
       # needed to allow actual and dynammic load balancing
       endpoint_mode: dnsrr
       # a real life replicas value better be in the 16 to 64 range
-      replicas: 2
+      # however we recommend keeping 1 in this stack deploy file so that
+      # an upgrade of the base image that comes with a database migration script
+      # is upgraded in a consistent way
+      replicas: 1
     configs:
       - source: storage
         target: /etc/softwareheritage/config.yml
@@ -219,7 +222,7 @@ services:
     deploy:
       # do not start replayers by default once the remainig of the stack is
       # running as expected, bump this value; expected real-life values should
-      # be something in the range [16, 64] (staging) or [16, 256] (prodiction)
+      # be something in the range [16, 64] (staging) or [16, 256] (production)
       # depending on your hardware capabilities; note that there is no need of
       # going above the number of partitions on the kafka cluster (so the 64
       # and 254 upper limits depending on the execution environment).
