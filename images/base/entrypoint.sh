@@ -13,8 +13,8 @@ fi
 
 # generate the pgservice file if any
 if [ -f /run/secrets/postgres-password ]; then
-	POSTGRES_PASSWORD_FILE=/run/secrets/postgres-password
-	setup_pgsql
+    POSTGRES_PASSWORD_FILE=/run/secrets/postgres-password
+    setup_pgsql
 fi
 
 # For debugging purpose
@@ -29,7 +29,7 @@ case "$1" in
       exec bash -i
       ;;
     *)
-	  if [ -v POSTGRES_DB ]; then
+      if [ -v POSTGRES_DB ]; then
         wait_pgsql template1
 
         echo Database setup
@@ -40,8 +40,8 @@ case "$1" in
         echo Initializing the database...
         swh db init-admin --db-name ${POSTGRES_DB} $1
         swh db init --flavor ${FLAVOR:-default} $1
-	    swh db upgrade $1
-	  fi
+        swh db upgrade $1
+      fi
 
       echo "Starting the SWH $1 RPC server"
       exec gunicorn3 \
