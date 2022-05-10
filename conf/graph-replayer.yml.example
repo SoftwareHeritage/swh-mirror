@@ -1,6 +1,6 @@
 storage:
   cls: pipeline
-  step:
+  steps:
   - cls: filter
   - cls: tenacious
     error_rate_limit:
@@ -29,13 +29,17 @@ journal_client:
   message.max.bytes: 1000000000
   object_types:
     - content
-    - skipped_content
     - directory
+    - extid
+    - metadata_authority
+    - metadata_fetcher
     - origin
     - origin_visit
     - origin_visit_status
+    - raw_extrinsic_metadata
     - release
     - revision
+    - skipped_content
     - snapshot
   privileged: true
 
