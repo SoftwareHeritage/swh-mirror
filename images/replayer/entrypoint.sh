@@ -11,7 +11,7 @@ fi
 
 # For debugging purpose
 echo "### CONFIG FILE ###"
-cat /etc/softwareheritage/config.yml
+cat /etc/softwareheritage/config.yml || true
 echo "###################"
 
 

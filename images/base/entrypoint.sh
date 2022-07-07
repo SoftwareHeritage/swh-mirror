@@ -19,7 +19,7 @@ fi
 
 # For debugging purpose
 echo "### CONFIG FILE ###"
-cat /etc/softwareheritage/config.yml | grep -v password
+cat /etc/softwareheritage/config.yml | grep -v password || true
 echo "###################"
 
 echo "Arguments: $@"
