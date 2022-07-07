@@ -44,10 +44,11 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     python3-dulwich \
     python3-swh.journal \
     python3-swh.objstorage \
-#    python3-swh.objstorage.cloud \
+    python3-swh.objstorage.cloud \
 #    python3-swh.objstorage.rados \
     python3-swh.scheduler \
     python3-swh.storage \
+    zstd \
     && \
   apt-get clean && \
   rm -rf /var/lib/apt/lists/*
@@ -118,3 +119,12 @@ RUN chmod +x /srv/softwareheritage/utils/*.sh
 
 COPY replayer/entrypoint.sh /
 ENTRYPOINT ["/entrypoint.sh"]
+
+
+###
+# Test image
+###
+FROM swh-base as swh-test
+
+COPY restore_kafka.py /
+#ENTRYPOINT ["python3", "-u", "/restore_kafka.py"]
