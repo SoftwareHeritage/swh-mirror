@@ -6,9 +6,9 @@ source /srv/softwareheritage/utils/pgsql.sh
 
 # generate the config file from the 'template'
 if [ -f /etc/softwareheritage/config.yml.tmpl ]; then
-	# I know... I know!
-	eval "echo \"`cat /etc/softwareheritage/config.yml.tmpl`\"" > \
-		 /etc/softwareheritage/config.yml
+    # I know... I know!
+    eval "echo \"`cat /etc/softwareheritage/config.yml.tmpl`\"" > \
+         /etc/softwareheritage/config.yml
 fi
 
 # generate the pgservice file if any
@@ -38,9 +38,12 @@ case "$1" in
           swh db create --db-name ${POSTGRES_DB} $1
         fi
         echo Initializing the database...
+        echo " step 1: init-admin"
         swh db init-admin --db-name ${POSTGRES_DB} $1
+        echo " step 2: init"
         swh db init --flavor ${FLAVOR:-default} $1
-        swh db upgrade $1
+        echo " step 3: upgrade"
+        swh db upgrade --non-interactive $1
       fi
 
       echo "Starting the SWH $1 RPC server"
