@@ -13,6 +13,8 @@ services:
     deploy:
       # we want only one replica of this service in the whole cluster
       replicas: 1
+      # possible workaround to prevent dropped idle cnx (making pg pool fail to work after a while)
+      endpoint_mode: dnsrr
       placement:
         max_replicas_per_node: 1
         constraints:
@@ -37,6 +39,7 @@ services:
     deploy:
       # we want only one replica of this service in the whole cluster
       replicas: 1
+      endpoint_mode: dnsrr
       placement:
         max_replicas_per_node: 1
         constraints:
