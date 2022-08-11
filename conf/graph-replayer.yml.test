@@ -1,0 +1,54 @@
+# this config file is a template used for tests, see in tests/
+
+storage:
+  cls: pipeline
+  steps:
+  - cls: filter
+  - cls: tenacious
+    error_rate_limit:
+      # fail after 10 errors for 1000 operations
+      errors: 10
+      window_size: 1000
+  - cls: remote
+    url: http://storage:5002/
+    max_retries: 5
+    pool_connections: 100
+    pool_maxsize: 200
+
+journal_client:
+  cls: kafka
+  brokers:
+    - {broker}
+  group_id: {group_id}_graph
+  prefix: swh.test.objects
+  sasl.username: {username}
+  sasl.password: {password}
+  security.protocol: sasl_ssl
+  sasl.mechanism: SCRAM-SHA-512
+  session.timeout.ms: 600000
+  max.poll.interval.ms: 3600000
+  message.max.bytes: 1000000000
+  object_types:
+    - content
+    - directory
+    - extid
+    - metadata_authority
+    - metadata_fetcher
+    - origin
+    - origin_visit
+    - origin_visit_status
+    - raw_extrinsic_metadata
+    - release
+    - revision
+    - skipped_content
+    - snapshot
+  privileged: true
+  stop_on_eof: true
+
+replayer:
+  error_reporter:
+    # used to track objects that the replayer really failed at storing in the
+    # storage
+    host: redis
+    port: 6379
+    db: 0
