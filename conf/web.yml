@@ -7,10 +7,10 @@ objstorage:
   cls: remote
   url: http://objstorage:5003/
 
-indexer_storage:
-  cls: remote
-  url: http://indexer-storage:5007/
-
+#indexer_storage:
+#  cls: remote
+#  url: http://indexer-storage:5007/
+#
 scheduler:
   cls: remote
   url: http://scheduler:5008/
@@ -18,11 +18,6 @@ scheduler:
 vault:
   cls: remote
   url: http://vault:5005/
-
-deposit:
-  private_api_url: https://deposit:5006/1/private/
-  private_api_user: swhworker
-  private_api_password: ''
 
 allowed_hosts:
   - appserver
