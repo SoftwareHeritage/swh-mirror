@@ -1,0 +1,18 @@
+storage:
+  cls: remote
+  url: http://storage:5002/
+
+vault:
+  cls: remote
+  url: http://vault:5005/
+
+celery:
+  broker_heartbeat: null
+  task_broker: amqp://guest:guest@amqp//
+  task_modules:
+    - swh.vault.cooking_tasks
+  task_queues:
+    - swh.vault.cooking_tasks.SWHBatchCookingTask
+    - swh.vault.cooking_tasks.SWHCookingTask
+
+max_bundle_size: 536870912

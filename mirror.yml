@@ -99,11 +99,11 @@ services:
     configs:
       - source: objstorage
         target: /etc/softwareheritage/config.yml
+    env_file:
+      - ./env/common-python.env
     environment:
       PORT: "5003"
-      STATSD_HOST: prometheus-statsd-exporter
-      STATSD_PORT: 9125
-    command: objstorage
+    command: ["rpc-server", "objstorage"]
 
   storage:
     # the swh-storage backend service; using postgresql (db-storage) as backend
@@ -125,15 +125,15 @@ services:
       POSTGRES_DB: swh-storage
       FLAVOR: mirror
       PORT: "5002"
-      STATSD_HOST: prometheus-statsd-exporter
-      STATSD_PORT: 9125
-    command: storage
-    depends_on:
-      - db-storage
+    env_file:
+      - ./env/common-python.env
     secrets:
       - source: swh-mirror-db-postgres-password
         target: postgres-password
         mode: 0400
+    command: ["rpc-server", "storage"]
+    depends_on:
+      - db-storage
 
   nginx:
     image: nginx
@@ -204,6 +204,8 @@ services:
         constraints:
           - node.labels.org.softwareheritage.mirror.monitoring == true
 
+## replayer services
+
   redis:
     image: redis:6.2.6
     deploy:
@@ -230,10 +232,12 @@ services:
       # going above the number of partitions on the kafka cluster (so the 64
       # and 254 upper limits depending on the execution environment).
       replicas: 0
+      restart_policy:
+        condition: "none"
+    env_file:
+      - ./env/common-python.env
     environment:
-      STATSD_HOST: prometheus-statsd-exporter
-      STATSD_PORT: 9125
-      STATSD_TAGS: 'role:content-replayer,hostname:${HOSTNAME}'
+      STATSD_TAGS: 'role:graph-replayer,hostname:${HOSTNAME}'
     configs:
       - source: graph-replayer
         target: /etc/softwareheritage/config.yml
@@ -248,9 +252,9 @@ services:
     deploy:
       # do not start replayers by default; see above
       replicas: 0
+    env_file:
+      - ./env/common-python.env
     environment:
-      STATSD_HOST: prometheus-statsd-exporter
-      STATSD_PORT: 9125
       STATSD_TAGS: 'role:content-replayer,hostname:${HOSTNAME}'
     configs:
       - source: content-replayer
@@ -261,16 +265,185 @@ services:
       - objstorage
       - redis
 
+## secondary services
+
+  amqp:
+    image: rabbitmq:3.6-management
+    ports:
+      - 5072:5672
+
+### vault services
+
+  db-vault:
+    # the database for the vault rpc server
+    image: postgres:13
+    deploy:
+      # we want only one replica of this service in the whole cluster
+      replicas: 1
+      endpoint_mode: dnsrr
+      placement:
+        max_replicas_per_node: 1
+        constraints:
+          - node.labels.org.softwareheritage.mirror.volumes.web-db == true
+    command: ['-c', 'shared_buffers=4GB', '-c', 'effective_cache_size=4GB', '-c', 'random_page_cost=1.5', '-c', 'max_wal_size=4GB']
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
+      POSTGRES_USER: swh
+      POSTGRES_DB: swh-vault
+    volumes:
+      - "vault-db:/var/lib/postgresql/data:rw,Z"
+    secrets:
+      - source: swh-mirror-vault-postgres-password
+        target: postgres-password
+        uid: '999'
+        mode: 0400
+
+  vault:
+    image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
+    deploy:
+      replicas: 1
+    env_file:
+      - ./env/common-python.env
+    configs:
+      - source: vault
+        target: /etc/softwareheritage/config.yml
+    environment:
+      PGHOST: db-vault
+      PGUSER: swh
+      POSTGRES_DB: swh-vault
+      PORT: "5005"
+    command: ["rpc-server",  "vault"]
+    secrets:
+      - source: swh-mirror-vault-postgres-password
+        target: postgres-password
+        uid: '999'
+        mode: 0400
+
+  vault-worker:
+    image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
+    deploy:
+      replicas: 1
+    env_file:
+      - ./env/common-python.env
+      - ./env/celery-worker.env
+    environment:
+      SWH_WORKER_INSTANCE: vault
+    configs:
+      - source: vault-worker
+        target: /etc/softwareheritage/config.yml
+    command:
+      - celery-worker
+
+  # vault do really need someone to talk to via SMTP
+  mailhog:
+    image: mailhog/mailhog
+
+### scheduler services
+
+  db-scheduler:
+    # the database for the vault rpc server
+    image: postgres:13
+    deploy:
+      # we want only one replica of this service in the whole cluster
+      replicas: 1
+      endpoint_mode: dnsrr
+      placement:
+        max_replicas_per_node: 1
+        constraints:
+          - node.labels.org.softwareheritage.mirror.volumes.web-db == true
+    command: ['-c', 'shared_buffers=4GB', '-c', 'effective_cache_size=4GB', '-c', 'random_page_cost=1.5', '-c', 'max_wal_size=4GB']
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
+      POSTGRES_USER: swh
+      POSTGRES_DB: swh-scheduler
+    volumes:
+      - "scheduler-db:/var/lib/postgresql/data:rw,Z"
+    secrets:
+      - source: swh-mirror-scheduler-postgres-password
+        target: postgres-password
+        uid: '999'
+        mode: 0400
+
+  scheduler:
+    image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
+    deploy:
+      replicas: 1
+    configs:
+      - source: scheduler
+        target: /etc/softwareheritage/config.yml
+    env_file:
+      - ./env/common-python.env
+    environment:
+      PGHOST: db-scheduler
+      PGUSER: swh
+      POSTGRES_DB: swh-scheduler
+      PORT: "5008"
+    command: ["rpc-server",  "scheduler"]
+    secrets:
+      - source: swh-mirror-scheduler-postgres-password
+        target: postgres-password
+        uid: '999'
+        mode: 0400
+
+  scheduler-listener:
+    image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
+    deploy:
+      replicas: 1
+    configs:
+      - source: scheduler
+        target: /etc/softwareheritage/config.yml
+    env_file:
+      - ./env/common-python.env
+    environment:
+      SWH_WORKER_INSTANCE: scheduler
+      PGHOST: db-scheduler
+      PGUSER: swh
+      POSTGRES_DB: swh-scheduler
+    command: ["scheduler", "start-listener"]
+    secrets:
+      - source: swh-mirror-scheduler-postgres-password
+        target: postgres-password
+        uid: '999'
+        mode: 0400
+
+  scheduler-runner:
+    image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
+    deploy:
+      replicas: 1
+    configs:
+      - source: scheduler
+        target: /etc/softwareheritage/config.yml
+    env_file:
+      - ./env/common-python.env
+    environment:
+      SWH_WORKER_INSTANCE: scheduler
+      PGHOST: db-scheduler
+      PGUSER: swh
+      POSTGRES_DB: swh-scheduler
+    command: ["scheduler", "start-runner", "--period", "10"]
+    secrets:
+      - source: swh-mirror-scheduler-postgres-password
+        target: postgres-password
+        uid: '999'
+        mode: 0400
+
+
 volumes:
   objstorage:
-  storage-db:
-  web-db:
   redis:
+  scheduler-db:
+  storage-db:
+  vault-db:
+  web-db:
 
 secrets:
   swh-mirror-db-postgres-password:
     external: true
   swh-mirror-web-postgres-password:
+    external: true
+  swh-mirror-vault-postgres-password:
+    external: true
+  swh-mirror-scheduler-postgres-password:
     external: true
 
 configs:
@@ -280,6 +453,12 @@ configs:
     file: conf/objstorage.yml
   nginx:
     file: conf/nginx.conf
+  scheduler:
+    file: conf/scheduler.yml
+  vault:
+    file: conf/vault.yml
+  vault-worker:
+    file: conf/vault-worker.yml
   web:
     file: conf/web.yml
   content-replayer:

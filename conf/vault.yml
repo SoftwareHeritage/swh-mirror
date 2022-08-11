@@ -1,0 +1,16 @@
+vault:
+  cls: postgresql
+  db: postgresql:///?service=swh
+  storage:
+    cls: remote
+    url: http://storage:5002/
+  scheduler:
+    cls: remote
+    url: http://scheduler:5008/
+  cache:
+    cls: pathslicing
+    root: /srv/softwareheritage/vault
+    slicing: 0:5
+  smtp:
+    port: 1025
+    host: mailhog

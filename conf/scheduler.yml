@@ -1,0 +1,9 @@
+scheduler:
+  cls: postgresql
+  db: postgresql:///?service=swh
+
+celery:
+  broker_heartbeat: null
+  task_broker: amqp://guest:guest@amqp
+  broker_transport_options:
+    max_retries: 1

@@ -39,15 +39,21 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
   apt-get install -y \
     -t $(lsb_release -sc)-backports \
     --no-install-recommends \
+	# git is required for the vault-worker... maybe use a dedicated image gor this
+	git \
     gunicorn \
     postgresql-client \
     python3-dulwich \
+    python3-swh.indexer \
+    python3-swh.indexer.storage \
     python3-swh.journal \
     python3-swh.objstorage \
     python3-swh.objstorage.cloud \
 #    python3-swh.objstorage.rados \
     python3-swh.scheduler \
+    python3-swh.search \
     python3-swh.storage \
+    python3-swh.vault \
     zstd \
     && \
   apt-get clean && \
