@@ -6,7 +6,7 @@ builddatetime="${builddate}-${buildtime}"
 
 username=$(docker info | grep Username | awk '{print $2}')
 
-for img in base web replayer; do
+for img in base web replayer test; do
     docker build \
            --build-arg SWH_VER=${builddatetime} \
            --build-arg debianversion=buster \
