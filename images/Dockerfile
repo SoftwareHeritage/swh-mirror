@@ -21,7 +21,7 @@ RUN echo deb [trusted=yes] https://debian.softwareheritage.org/ $(lsb_release -s
 RUN mkdir /etc/softwareheritage
 RUN mkdir -p /var/run/gunicorn/swh
 RUN mkdir -p /var/lib/swh
-RUN mkdir -p /srv/softwareheritage/objects
+RUN mkdir -p /srv/softwareheritage
 
 ENV SWH_CONFIG_FILENAME=/etc/softwareheritage/config.yml
 ENV LC_ALL=C.UTF-8
@@ -58,6 +58,7 @@ COPY conf/logconfig.ini /etc/gunicorn/logconfig.ini
 COPY conf/gunicorn.cfg /etc/gunicorn/swh.cfg
 COPY tools/*.sh /srv/softwareheritage/utils/
 COPY tools/*.sql /srv/softwareheritage/utils/
+COPY tools/*.py /srv/softwareheritage/utils/
 RUN chmod +x /srv/softwareheritage/utils/*.sh
 
 COPY base/entrypoint.sh /

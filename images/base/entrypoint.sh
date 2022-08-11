@@ -17,6 +17,11 @@ if [ -f /run/secrets/postgres-password ]; then
     setup_pgsql
 fi
 
+# ensure root dirs used for pathslicer objstorage exist (if any)
+if [ -v SWH_CONFIG_FILENAME ]; then
+	python3 /srv/softwareheritage/utils/init_pathslicer_root.py
+fi
+
 # For debugging purpose
 echo "### CONFIG FILE ###"
 cat /etc/softwareheritage/config.yml | grep -v password || true
