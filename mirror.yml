@@ -7,7 +7,7 @@ services:
     deploy:
       replicas: 1
 
-  db-storage:
+  storage-db:
     # the main storage database
     image: postgres:13
     deploy:
@@ -28,12 +28,12 @@ services:
     volumes:
       - "storage-db:/var/lib/postgresql/data:rw,Z"
     secrets:
-      - source: swh-mirror-db-postgres-password
+      - source: swh-mirror-storage-db-password
         target: postgres-password
         uid: '999'
         mode: 0400
 
-  db-web:
+  web-db:
     # the database for the web application
     image: postgres:13
     deploy:
@@ -52,7 +52,7 @@ services:
     volumes:
       - "web-db:/var/lib/postgresql/data:rw,Z"
     secrets:
-      - source: swh-mirror-web-postgres-password
+      - source: swh-mirror-web-db-password
         target: postgres-password
         uid: '999'
         mode: 0400
@@ -66,14 +66,14 @@ services:
     command: serve
     environment:
       PORT: "5004"
-      PGHOST: db-web
+      PGHOST: web-db
       PGUSER: swh
       POSTGRES_DB: swh-web
     depends_on:
-      - db-web
+      - web-db
       - memcache
     secrets:
-      - source: swh-mirror-web-postgres-password
+      - source: swh-mirror-web-db-password
         target: postgres-password
         mode: 0400
 
@@ -106,7 +106,7 @@ services:
     command: ["rpc-server", "objstorage"]
 
   storage:
-    # the swh-storage backend service; using postgresql (db-storage) as backend
+    # the swh-storage backend service; using postgresql (storage-db) as backend
     image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
     deploy:
       # needed to allow actual and dynammic load balancing
@@ -120,7 +120,7 @@ services:
       - source: storage
         target: /etc/softwareheritage/config.yml
     environment:
-      PGHOST: db-storage
+      PGHOST: storage-db
       PGUSER: swh
       POSTGRES_DB: swh-storage
       FLAVOR: mirror
@@ -128,12 +128,12 @@ services:
     env_file:
       - ./env/common-python.env
     secrets:
-      - source: swh-mirror-db-postgres-password
+      - source: swh-mirror-storage-db-password
         target: postgres-password
         mode: 0400
     command: ["rpc-server", "storage"]
     depends_on:
-      - db-storage
+      - storage-db
 
   nginx:
     image: nginx
@@ -225,7 +225,7 @@ services:
   graph-replayer:
     image: softwareheritage/replayer:${SWH_IMAGE_TAG:-latest}
     deploy:
-      # do not start replayers by default once the remainig of the stack is
+      # do not start replayers by default once the remaining of the stack is
       # running as expected, bump this value; expected real-life values should
       # be something in the range [16, 64] (staging) or [16, 256] (production)
       # depending on your hardware capabilities; note that there is no need of
@@ -274,7 +274,7 @@ services:
 
 ### vault services
 
-  db-vault:
+  vault-db:
     # the database for the vault rpc server
     image: postgres:13
     deploy:
@@ -293,7 +293,7 @@ services:
     volumes:
       - "vault-db:/var/lib/postgresql/data:rw,Z"
     secrets:
-      - source: swh-mirror-vault-postgres-password
+      - source: swh-mirror-vault-db-password
         target: postgres-password
         uid: '999'
         mode: 0400
@@ -308,13 +308,14 @@ services:
       - source: vault
         target: /etc/softwareheritage/config.yml
     environment:
-      PGHOST: db-vault
+      PGHOST: vault-db
       PGUSER: swh
       POSTGRES_DB: swh-vault
       PORT: "5005"
+      LOG_LEVEL: DEBUG
     command: ["rpc-server",  "vault"]
     secrets:
-      - source: swh-mirror-vault-postgres-password
+      - source: swh-mirror-vault-db-password
         target: postgres-password
         uid: '999'
         mode: 0400
@@ -328,6 +329,7 @@ services:
       - ./env/celery-worker.env
     environment:
       SWH_WORKER_INSTANCE: vault
+      LOG_LEVEL: DEBUG
     configs:
       - source: vault-worker
         target: /etc/softwareheritage/config.yml
@@ -340,7 +342,7 @@ services:
 
 ### scheduler services
 
-  db-scheduler:
+  scheduler-db:
     # the database for the vault rpc server
     image: postgres:13
     deploy:
@@ -359,7 +361,7 @@ services:
     volumes:
       - "scheduler-db:/var/lib/postgresql/data:rw,Z"
     secrets:
-      - source: swh-mirror-scheduler-postgres-password
+      - source: swh-mirror-scheduler-db-password
         target: postgres-password
         uid: '999'
         mode: 0400
@@ -374,13 +376,13 @@ services:
     env_file:
       - ./env/common-python.env
     environment:
-      PGHOST: db-scheduler
+      PGHOST: scheduler-db
       PGUSER: swh
       POSTGRES_DB: swh-scheduler
       PORT: "5008"
     command: ["rpc-server",  "scheduler"]
     secrets:
-      - source: swh-mirror-scheduler-postgres-password
+      - source: swh-mirror-scheduler-db-password
         target: postgres-password
         uid: '999'
         mode: 0400
@@ -396,12 +398,12 @@ services:
       - ./env/common-python.env
     environment:
       SWH_WORKER_INSTANCE: scheduler
-      PGHOST: db-scheduler
+      PGHOST: scheduler-db
       PGUSER: swh
       POSTGRES_DB: swh-scheduler
     command: ["scheduler", "start-listener"]
     secrets:
-      - source: swh-mirror-scheduler-postgres-password
+      - source: swh-mirror-scheduler-db-password
         target: postgres-password
         uid: '999'
         mode: 0400
@@ -417,12 +419,12 @@ services:
       - ./env/common-python.env
     environment:
       SWH_WORKER_INSTANCE: scheduler
-      PGHOST: db-scheduler
+      PGHOST: scheduler-db
       PGUSER: swh
       POSTGRES_DB: swh-scheduler
     command: ["scheduler", "start-runner", "--period", "10"]
     secrets:
-      - source: swh-mirror-scheduler-postgres-password
+      - source: swh-mirror-scheduler-db-password
         target: postgres-password
         uid: '999'
         mode: 0400
@@ -437,14 +439,15 @@ volumes:
   web-db:
 
 secrets:
-  swh-mirror-db-postgres-password:
+  swh-mirror-storage-db-password:
     external: true
-  swh-mirror-web-postgres-password:
+  swh-mirror-web-db-password:
     external: true
-  swh-mirror-vault-postgres-password:
+  swh-mirror-vault-db-password:
     external: true
-  swh-mirror-scheduler-postgres-password:
+  swh-mirror-scheduler-db-password:
     external: true
+
 
 configs:
   storage:
