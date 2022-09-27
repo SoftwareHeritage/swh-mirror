@@ -1,4 +1,5 @@
 pytest
 pytest-testinfra
+pytest-dotenv
 requests
 msgpack

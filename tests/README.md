@@ -76,6 +76,7 @@ Note that for this test run:
     for the content replication; it would typically include access credentials,
     e.g. `https://login:password@objstorage.softwareheritage.org/`,
   - `SWH_IMAGE_TAG`: the docker image tag to be tested.
+  You can copy the template `env/tests.env.template` to `env/tests.env` to set them.
 
 - the `softwareheritage/base`, `softwareheritage/web`,
   `softwareheritage/replayer` and `softwareheritage/test` images must be built
