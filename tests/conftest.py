@@ -106,7 +106,7 @@ def mirror_stack(request, docker_host, tmp_path_factory):
 
         # give a bit of time to docker to sync the state of service<->volumes
         # relations so the next step runs ok
-        time.sleep(1)
+        time.sleep(20)
         LOGGER.info("Remove volumes of stack %s", stack_name)
         for volume in docker_host.check_output(
             "docker volume ls --format {{.Name}} "

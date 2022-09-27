@@ -37,8 +37,8 @@ SERVICES = {
     "{}_scheduler-listener": "1/1",
     "{}_scheduler-runner": "1/1",
 }
-ATTEMPTS = 200
-DELAY = 0.5
+ATTEMPTS = 600
+DELAY = 1
 SCALE = 2
 API_URL = "http://127.0.0.1:5081/api/1"
 
