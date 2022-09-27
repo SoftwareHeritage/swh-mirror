@@ -126,12 +126,3 @@ RUN chmod +x /srv/softwareheritage/utils/*.sh
 
 COPY replayer/entrypoint.sh /
 ENTRYPOINT ["/entrypoint.sh"]
-
-
-###
-# Test image
-###
-FROM swh-base as swh-test
-
-COPY restore_kafka.py /
-#ENTRYPOINT ["python3", "-u", "/restore_kafka.py"]
