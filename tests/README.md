@@ -131,3 +131,63 @@ tests/test_graph_replayer.py .                                            [100%]
 ```
 
 Note the test takes quite some time to execute, so be patient.
+
+
+Troubleshooting
+===============
+
+### Watch out for stale services
+
+If something goes wrong, you might want to check if you have any remaining Docker services setup:
+
+    docker service ls
+
+If you want to shut them all down, you can use:
+
+    docker service rm $(docker service ls --format '{{.Name}}')
+
+### I want a shell!
+
+To run a shell in an image in the Swarm context, use the following:
+
+    docker run --network=swhtest_mirror0_swhtest-mirror -ti --env-file env/common-python.env --env STATSD_TAGS="role:content-replayer,hostname:${HOSTNAME}"  -v /tmp/pytest-of-lunar/pytest-current/mirrorcurrent/conf/content-replayer.yml:/etc/softwareheritage/config.yml  softwareheritage/replayer:20220915-163058  shell
+
+### Some containers are never started
+
+If you notice that some container stay at 0 replicas in `docker service ls`, it probably means the rule for services, as described in `mirror.yml`, cannot be fulfilled by the current nodes part of the swarm.
+
+Most likely, you are missing the labels locating the volumes needed by the containers. You might want to run:
+
+    docker node update $HOSTNAME \
+      --label-add org.softwareheritage.mirror.volumes.storage-db=true \
+      --label-add org.softwareheritage.mirror.volumes.web-db=true \
+      --label-add org.softwareheritage.mirror.volumes.objstorage=true \
+      --label-add org.softwareheritage.mirror.volumes.redis=true
+
+### SWH services keep restarting
+
+If SWH services keep restarting, look at the service logs, but don’t forget to look at the logs for Docker service (using `journalctl -u docker.service` for example).
+
+If you see:
+
+    error="task: non-zero exit (124)"
+
+It means that `wait-for-it` has reached its timeout. You should double check the network configuration, including the firewall.
+
+### Failure while checking the Vault service
+
+If the test fail with the following exception:
+
+~~~
+>           assert isinstance(tarfilecontent, bytes)
+E           assert False
+E            +  where False = isinstance({'exception': 'NotFoundExc', 'reason': 'Cooked archive for swh:1:dir:c1695cab57e5bfe64ea4b0900c4575bf7240483d not found.', 'traceback': 'Traceback (most recent call last):\n  File "/usr/lib/python3/dist-packages/rest_framework/views.py", line 492, in dispatch\n    response = handler(request, *args, **kwargs)\n  File "/usr/lib/python3/dist-packages/rest_framework/decorators.py", line 54, in handler\n    return func(*args, **kwargs)\n  File "/usr/lib/python3/dist-pac→
+
+…/swh-mirror/tests/test_graph_replayer.py:423: AssertionError
+~~~
+
+It is most likely because of a stale database. Remove the vault volume using:
+
+    docker volume rm swhtest_mirror0_vault-db
+
+In general, the test has been designed to be run on empty volumes.
