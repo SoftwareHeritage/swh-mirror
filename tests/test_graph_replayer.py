@@ -14,7 +14,7 @@ from confluent_kafka import Consumer, KafkaException
 import msgpack
 import requests
 
-from .conftest import KAFKA_GROUPID, KAFKA_PASSWORD, KAFKA_USERNAME
+from .conftest import KAFKA_GROUPID, KAFKA_PASSWORD, KAFKA_USERNAME, LOGGER
 
 SERVICES = {
     "{}_content-replayer": "0/0",
@@ -55,16 +55,16 @@ def running_services(host, stack):
 
 
 def check_running_services(host, stack, services):
-    print("Waiting for service", services)
+    LOGGER.info("Waiting for services %s", services)
     mirror_services_ = {}
     for i in range(ATTEMPTS):
         mirror_services = running_services(host, stack)
         mirror_services = {k: v for k, v in mirror_services.items() if k in services}
         if mirror_services == services:
-            print("Got them all!")
+            LOGGER.info("Got them all!")
             break
         if mirror_services != mirror_services_:
-            print("Not yet there", mirror_services)
+            LOGGER.info("Not yet there %s", mirror_services)
             mirror_services_ = mirror_services
         time.sleep(0.5)
     return mirror_services == services
@@ -98,8 +98,7 @@ def content_get(url, done):
     try:
         data = get(content["data_url"])
     except Exception as exc:
-        print("Failed loading", content["data_url"])
-        print(exc)
+        LOGGER.error("Failed loading %s", content["data_url"], exc_info=exc)
         raise
     assert len(data) == content["length"]
     assert sha1(data).hexdigest() == content["checksums"]["sha1"]
@@ -278,7 +277,7 @@ def get_expected_stats():
     partitions = set()
 
     def on_assign(cons, parts):
-        print("assignment", parts)
+        LOGGER.info("assignment %s", parts)
         for p in parts:
             partitions.add(p.partition)
 
@@ -303,9 +302,12 @@ def get_expected_stats():
                 # Proper message
                 k = msgpack.unpackb(msg.key())
                 v = msgpack.unpackb(msg.value())
-                print(
-                    "%% %s [%d] at offset %d with key %s:\n"
-                    % (msg.topic(), msg.partition(), msg.offset(), k)
+                LOGGER.info(
+                    "%% %s [%d] at offset %d with key %s:\n",
+                    msg.topic(),
+                    msg.partition(),
+                    msg.offset(),
+                    k,
                 )
                 assert k == v["origin"]
                 stats[k] = v
@@ -321,7 +323,7 @@ def test_mirror(host, mirror_stack):
     # run replayer services
     for service_type in ("content", "graph"):
         service = f"{mirror_stack}_{service_type}-replayer"
-        print(f"Scale {service} to 1")
+        LOGGER.info("Scale %s to 1", service)
         host.check_output(f"docker service scale -d {service}=1")
         if not check_running_services(host, mirror_stack, {service: "1/1"}):
             breakpoint()
@@ -330,7 +332,7 @@ def test_mirror(host, mirror_stack):
         )
         assert len(logs) == 1
 
-        print(f"Scale {service} to {SCALE}")
+        LOGGER.info("Scale %s to %d", service, SCALE)
         host.check_output(f"docker service scale -d {service}={SCALE}")
         check_running_services(host, mirror_stack, {service: f"{SCALE}/{SCALE}"})
         logs = wait_for_log_entry(
@@ -339,14 +341,14 @@ def test_mirror(host, mirror_stack):
         assert len(logs) == SCALE
 
         # wait for the replaying to be done (stop_on_oef is true)
-        print(f"Wait for {service} to be done")
+        LOGGER.info("Wait for %s to be done", service)
         logs = wait_for_log_entry(host, service, "Done.", SCALE)
         # >= SCALE below because replayer services may have been restarted
         # (once done) before we scale them to 0
         if not (len(logs) >= SCALE):
             breakpoint()
         assert len(logs) >= SCALE
-        print(f"Scale {service} to 0")
+        LOGGER.info("Scale %s to 0", service)
         check_running_services(host, mirror_stack, {service: f"0/{SCALE}"})
 
         # TODO: check there are no error reported in redis after the replayers are done
@@ -355,7 +357,7 @@ def test_mirror(host, mirror_stack):
     if False:
         # check replicated archive is in good shape
         expected_stats = get_expected_stats()
-        print("Check replicated archive")
+        LOGGER.info("Check replicated archive")
         # seems the graph replayer is OK, let's check the archive can tell something
         expected_origins = sorted(expected_stats)
         assert len(origins) == len(expected_origins)
@@ -365,16 +367,16 @@ def test_mirror(host, mirror_stack):
             timing_stats.clear()
             assert origin == expected["origin"]
             origin_stats, swhids = get_stats(origin)
-            print(origin_stats)
-            print(f"{len(timing_stats)} REQS took {sum(timing_stats)}s")
+            LOGGER.info("%s", origin_stats)
+            LOGGER.info("%d REQS took %ss", len(timing_stats), sum(timing_stats))
             assert origin_stats == expected
-            print(f"{origin} is OK")
+            LOGGER.info("%s is OK", origin)
 
     # test the vault service
     cooks = []
     # first start all the cookings
     for origin in origins:
-        print(f"Cook HEAD for {origin['url']}")
+        LOGGER.info("Cook HEAD for %s", origin["url"])
         visit = get(
             f"{API_URL}/origin/{origin['url']}/visit/latest/?require_snapshot=true"
         )
@@ -400,7 +402,7 @@ def test_mirror(host, mirror_stack):
             else:
                 breakpoint()
 
-        print(f"Directory is {swhid}")
+        LOGGER.info("Directory is %s", swhid)
         cook = post(f"{API_URL}/vault/flat/{swhid}/")
         assert cook
         assert cook["status"] in ("new", "pending")
@@ -421,9 +423,9 @@ def test_mirror(host, mirror_stack):
         assert all(fname.startswith(swhid) for fname in filelist)
         for path in filelist[1:]:
             tarinfo = tarfileobj.getmember(path)
-            expected = get(
-                f"{API_URL}/directory/{quote(path[10:])}"
-            )  # remove the 'swh:1:dir:' part
+            url = f"{API_URL}/directory/{quote(path[10:])}"
+            expected = get(url)  # remove the 'swh:1:dir:' part
+            LOGGER.info("Retrieved from storage: %s → %s", url, expected)
             if expected["type"] == "dir":
                 assert tarinfo.isdir()
             elif expected["type"] == "file":

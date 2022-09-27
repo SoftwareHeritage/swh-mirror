@@ -3,6 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import logging
 from os import chdir, environ
 from pathlib import Path
 from shutil import copy, copytree
@@ -22,6 +23,8 @@ KAFKA_BROKER = environ["SWH_MIRROR_TEST_KAFKA_BROKER"]
 KAFKA_GROUPID = f"{KAFKA_USERNAME}-{uuid4()}"
 OBJSTORAGE_URL = environ["SWH_MIRROR_TEST_OBJSTORAGE_URL"]
 WFI_TIMEOUT = 60
+
+LOGGER = logging.getLogger(__name__)
 
 
 def pytest_addoption(parser, pluginmanager):
@@ -59,7 +62,7 @@ def mirror_stack(request, docker_host, tmp_path_factory):
     # start the whole cluster
     stack_name = f"swhtest_{tmp_path.name}"
 
-    print("Create missing secrets")
+    LOGGER.info("Create missing secrets")
     existing_secrets = [
         line.strip()
         for line in docker_host.check_output(
@@ -69,11 +72,11 @@ def mirror_stack(request, docker_host, tmp_path_factory):
     for srv in ("storage", "web", "vault", "scheduler"):
         secret = f"swh-mirror-{srv}-db-password"
         if secret not in existing_secrets:
-            print("Creating secret {secret}")
+            LOGGER.info("Creating secret %s", secret)
             docker_host.check_output(
                 f"echo not-so-secret | docker secret create {secret} -"
             )
-    print("Remove config objects (if any)")
+    LOGGER.info("Remove config objects (if any)")
     existing_configs = [
         line.strip()
         for line in docker_host.check_output(
@@ -84,17 +87,17 @@ def mirror_stack(request, docker_host, tmp_path_factory):
         if cfg.startswith(f"{stack_name}_"):
             docker_host.check_output(f"docker config rm {cfg}")
 
-    print(f"Deploy docker stack {stack_name}")
+    LOGGER.info("Deploy docker stack %s", stack_name)
     docker_host.check_output(f"docker stack deploy -c mirror.yml {stack_name}")
 
     yield stack_name
 
     # breakpoint()
     if not request.config.getoption("keep_stack"):
-        print(f"Remove stack {stack_name}")
+        LOGGER.info("Remove stack %s", stack_name)
         docker_host.check_output(f"docker stack rm {stack_name}")
         # wait for services to be down
-        print(f"Wait for all services of {stack_name} to be down")
+        LOGGER.info("Wait for all services of %s to be down", stack_name)
         while docker_host.check_output(
             "docker service ls --format {{.Name}} "
             f"--filter label=com.docker.stack.namespace={stack_name}"
@@ -104,7 +107,7 @@ def mirror_stack(request, docker_host, tmp_path_factory):
         # give a bit of time to docker to sync the state of service<->volumes
         # relations so the next step runs ok
         time.sleep(1)
-        print(f"Remove volumes of stack {stack_name}")
+        LOGGER.info("Remove volumes of stack %s", stack_name)
         for volume in docker_host.check_output(
             "docker volume ls --format {{.Name}} "
             f"--filter label=com.docker.stack.namespace={stack_name}"
@@ -113,6 +116,6 @@ def mirror_stack(request, docker_host, tmp_path_factory):
             try:
                 docker_host.check_output(f"docker volume rm {volume}")
             except AssertionError:
-                print(f"Failed to remove volume {volume}")
+                LOGGER.error("Failed to remove volume %s", volume)
 
     chdir(cwd)
