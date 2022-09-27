@@ -1,0 +1,4 @@
+pytest
+pytest-testinfra
+requests
+msgpack
