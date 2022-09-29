@@ -3,3 +3,4 @@ pytest-testinfra
 pytest-dotenv
 requests
 msgpack
+confluent-kafka
