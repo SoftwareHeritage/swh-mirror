@@ -1,6 +1,7 @@
 pytest
-pytest-testinfra
 pytest-dotenv
+pytest-timeout
 requests
 msgpack
 confluent-kafka
+python-on-whales

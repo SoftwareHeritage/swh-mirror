@@ -7,11 +7,10 @@ import logging
 from os import chdir, environ
 from pathlib import Path
 from shutil import copy, copytree
-import time
 from uuid import uuid4
 
 import pytest
-import testinfra
+from python_on_whales import DockerClient, DockerException
 
 APIURL = "http://127.0.0.1:5080/api/1/"
 SWH_IMAGE_TAG = environ["SWH_IMAGE_TAG"]
@@ -34,17 +33,18 @@ def pytest_addoption(parser, pluginmanager):
 
 
 @pytest.fixture(scope="session")
-def docker_host():
-    return testinfra.get_host("local://")
+def docker_client():
+    return DockerClient()
 
 
 # scope='session' so we use the same container for all the tests;
 @pytest.fixture(scope="session")
-def mirror_stack(request, docker_host, tmp_path_factory):
+def mirror_stack(request, docker_client, tmp_path_factory):
     tmp_path = tmp_path_factory.mktemp("mirror")
     copytree(SRC_PATH / "conf", tmp_path / "conf")
     copytree(SRC_PATH / "env", tmp_path / "env")
     copy(SRC_PATH / "mirror.yml", tmp_path)
+    Path(tmp_path / "secret").write_bytes(b"not-so-secret\n")
     cwd = Path.cwd()
     chdir(tmp_path)
     # copy test-specific conf files
@@ -63,59 +63,51 @@ def mirror_stack(request, docker_host, tmp_path_factory):
     stack_name = f"swhtest_{tmp_path.name}"
 
     LOGGER.info("Create missing secrets")
-    existing_secrets = [
-        line.strip()
-        for line in docker_host.check_output(
-            "docker secret ls --format '{{.Name}}'"
-        ).splitlines()
-    ]
     for srv in ("storage", "web", "vault", "scheduler"):
-        secret = f"swh-mirror-{srv}-db-password"
-        if secret not in existing_secrets:
-            LOGGER.info("Creating secret %s", secret)
-            docker_host.check_output(
-                f"echo not-so-secret | docker secret create {secret} -"
-            )
+        secret_name = f"swh-mirror-{srv}-db-password"
+        try:
+            docker_client.secret.create(secret_name, tmp_path / "secret")
+            LOGGER.info("Created secret %s", secret_name)
+        except DockerException as e:
+            if "code = AlreadyExists" not in e.stderr:
+                raise
+
     LOGGER.info("Remove config objects (if any)")
-    existing_configs = [
-        line.strip()
-        for line in docker_host.check_output(
-            "docker config ls --format '{{.Name}}'"
-        ).splitlines()
-    ]
-    for cfg in existing_configs:
-        if cfg.startswith(f"{stack_name}_"):
-            docker_host.check_output(f"docker config rm {cfg}")
+    existing_configs = docker_client.config.list(
+        filters={"label=com.docker.stack.namespace": stack_name}
+    )
+    for config in existing_configs:
+        config.remove()
 
     LOGGER.info("Deploy docker stack %s", stack_name)
-    docker_host.check_output(f"docker stack deploy -c mirror.yml {stack_name}")
+    docker_stack = docker_client.stack.deploy(stack_name, "mirror.yml")
 
-    yield stack_name
+    yield docker_stack
 
-    # breakpoint()
     if not request.config.getoption("keep_stack"):
         LOGGER.info("Remove stack %s", stack_name)
-        docker_host.check_output(f"docker stack rm {stack_name}")
-        # wait for services to be down
-        LOGGER.info("Wait for all services of %s to be down", stack_name)
-        while docker_host.check_output(
-            "docker service ls --format {{.Name}} "
-            f"--filter label=com.docker.stack.namespace={stack_name}"
-        ):
-            time.sleep(0.2)
+        docker_stack.remove()
+        stack_containers = docker_client.container.list(
+            filters={"label=com.docker.stack.namespace": stack_name}
+        )
 
-        # give a bit of time to docker to sync the state of service<->volumes
-        # relations so the next step runs ok
-        time.sleep(20)
+        try:
+            LOGGER.info("Waiting for all containers of %s to be down", stack_name)
+            docker_client.container.wait(stack_containers)
+        except DockerException as e:
+            # We have a TOCTOU issue, so skip the error if some containers have already
+            # been stopped by the time we wait for them.
+            if "No such container" not in e.stderr:
+                raise
+
         LOGGER.info("Remove volumes of stack %s", stack_name)
-        for volume in docker_host.check_output(
-            "docker volume ls --format {{.Name}} "
-            f"--filter label=com.docker.stack.namespace={stack_name}"
-        ).splitlines():
-
+        stack_volumes = docker_client.volume.list(
+            filters={"label=com.docker.stack.namespace": stack_name}
+        )
+        for volume in stack_volumes:
             try:
-                docker_host.check_output(f"docker volume rm {volume}")
-            except AssertionError:
-                LOGGER.error("Failed to remove volume %s", volume)
+                volume.remove()
+            except DockerException:
+                LOGGER.exception("Failed to remove volume %s", volume)
 
     chdir(cwd)

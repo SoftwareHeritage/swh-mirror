@@ -8,15 +8,17 @@ from io import BytesIO
 import re
 import tarfile
 import time
+from typing import Dict
 from urllib.parse import quote
 
 from confluent_kafka import Consumer, KafkaException
 import msgpack
+from python_on_whales import DockerException
 import requests
 
 from .conftest import KAFKA_GROUPID, KAFKA_PASSWORD, KAFKA_USERNAME, LOGGER
 
-SERVICES = {
+INITIAL_SERVICES_STATUS = {
     "{}_amqp": "1/1",
     "{}_content-replayer": "0/0",
     "{}_grafana": "1/1",
@@ -40,57 +42,74 @@ SERVICES = {
     "{}_scheduler-listener": "1/1",
     "{}_scheduler-runner": "1/1",
 }
-ATTEMPTS = 600
-DELAY = 1
 SCALE = 2
 API_URL = "http://127.0.0.1:5081/api/1"
 
 
-def running_services(host, stack):
-    all_services = host.check_output(
-        "docker service ls --format '{{.Name}} {{.Replicas}}'"
-    )
-    return dict(
-        line.split()[:2]
-        for line in all_services.splitlines()
-        if line.startswith(f"{stack}_")
-    )
+def service_target_replicas(service):
+    if "Replicated" in service.spec.mode:
+        return service.spec.mode["Replicated"]["Replicas"]
+    elif "Global" in service.spec.mode:
+        return 1
+    else:
+        raise ValueError(f"Unknown mode {service.spec.mode}")
 
 
-def check_running_services(host, stack, services):
-    LOGGER.info("Waiting for services %s", services)
-    mirror_services_ = {}
-    for i in range(ATTEMPTS):
-        mirror_services = running_services(host, stack)
-        mirror_services = {k: v for k, v in mirror_services.items() if k in services}
-        if mirror_services == services:
+def is_task_running(task):
+    try:
+        return task.status.state == "running"
+    except DockerException as e:
+        # A task might already have disappeared before we can get its status.
+        # In that case, we know for sure it’s not running.
+        if "No such object" in e.stderr:
+            return False
+        else:
+            raise
+
+
+def wait_services_status(stack, target_status: Dict[str, int]):
+    LOGGER.info("Waiting for services %s", target_status)
+    last_changed_status = {}
+    while True:
+        services = [
+            service
+            for service in stack.services()
+            if service.spec.name in target_status
+        ]
+        status = {
+            service.spec.name: "%s/%s"
+            % (
+                len([True for task in service.ps() if is_task_running(task)]),
+                service_target_replicas(service),
+            )
+            for service in services
+        }
+        if status == target_status:
             LOGGER.info("Got them all!")
             break
-        if mirror_services != mirror_services_:
-            LOGGER.info("Not yet there %s", mirror_services)
-            mirror_services_ = mirror_services
-        time.sleep(0.5)
-    return mirror_services == services
+        if status != last_changed_status:
+            LOGGER.info("Not yet there %s", status)
+            last_changed_status = status
+        time.sleep(1)
+    return status == target_status
 
 
-def get_logs(host, service):
-    rows = host.check_output(f"docker service logs -t {service}").splitlines()
-    reg = re.compile(
-        rf"^(?P<timestamp>.+) {service}[.]"
-        r"(?P<num>\d+)[.](?P<id>\w+)@(?P<host>\w+) +[|] "
-        r"(?P<logline>.+)$"
-    )
-    return [m.groupdict() for m in (reg.match(row) for row in rows) if m is not None]
-
-
-def wait_for_log_entry(host, service, logline, occurrences=1):
-    for i in range(ATTEMPTS):
-        logs = get_logs(host, service)
-        match = [entry for entry in logs if logline in entry["logline"]]
-        if match and len(match) >= occurrences:
-            return match
-        time.sleep(DELAY)
-    return []
+def wait_for_log_entry(docker_client, service, log_entry, occurrences=1):
+    count = 0
+    for stream_type, stream_content in docker_client.service.logs(
+        service, follow=True, stream=True
+    ):
+        LOGGER.debug("%s output: %s", service.spec.name, stream_content)
+        if stream_type != "stdout":
+            continue
+        count += len(
+            re.findall(
+                re.escape(log_entry.encode("us-ascii", errors="replace")),
+                stream_content,
+            )
+        )
+        if count >= occurrences:
+            break
 
 
 def content_get(url, done):
@@ -319,40 +338,43 @@ def get_expected_stats():
     return stats
 
 
-def test_mirror(host, mirror_stack):
-    services = {k.format(mirror_stack): v for k, v in SERVICES.items()}
-    check_running_services(host, mirror_stack, services)
+def test_mirror(docker_client, mirror_stack):
+    initial_services_status = {
+        k.format(mirror_stack.name): v for k, v in INITIAL_SERVICES_STATUS.items()
+    }
+    wait_services_status(mirror_stack, initial_services_status)
 
     # run replayer services
     for service_type in ("content", "graph"):
-        service = f"{mirror_stack}_{service_type}-replayer"
-        LOGGER.info("Scale %s to 1", service)
-        host.check_output(f"docker service scale -d {service}=1")
-        if not check_running_services(host, mirror_stack, {service: "1/1"}):
-            breakpoint()
-        logs = wait_for_log_entry(
-            host, service, f"Starting the SWH mirror {service_type} replayer"
+        service = docker_client.service.inspect(
+            f"{mirror_stack}_{service_type}-replayer"
         )
-        assert len(logs) == 1
+        LOGGER.info("Scale %s to 1", service.spec.name)
+        service.scale(1)
+        wait_services_status(mirror_stack, {service.spec.name: "1/1"})
+        wait_for_log_entry(
+            docker_client,
+            service,
+            f"Starting the SWH mirror {service_type} replayer",
+            1,
+        )
 
-        LOGGER.info("Scale %s to %d", service, SCALE)
-        host.check_output(f"docker service scale -d {service}={SCALE}")
-        check_running_services(host, mirror_stack, {service: f"{SCALE}/{SCALE}"})
-        logs = wait_for_log_entry(
-            host, service, f"Starting the SWH mirror {service_type} replayer", SCALE
+        LOGGER.info("Scale %s to %d", service.spec.name, SCALE)
+        service.scale(SCALE)
+        wait_for_log_entry(
+            docker_client,
+            service,
+            f"Starting the SWH mirror {service_type} replayer",
+            SCALE,
         )
-        assert len(logs) == SCALE
 
         # wait for the replaying to be done (stop_on_oef is true)
-        LOGGER.info("Wait for %s to be done", service)
-        logs = wait_for_log_entry(host, service, "Done.", SCALE)
-        # >= SCALE below because replayer services may have been restarted
-        # (once done) before we scale them to 0
-        if not (len(logs) >= SCALE):
-            breakpoint()
-        assert len(logs) >= SCALE
-        LOGGER.info("Scale %s to 0", service)
-        check_running_services(host, mirror_stack, {service: f"0/{SCALE}"})
+        LOGGER.info("Wait for %s to be done", service.spec.name)
+        wait_for_log_entry(docker_client, service, "Done.", SCALE)
+
+        LOGGER.info("Scale %s to 0", service.spec.name)
+        service.scale(0)
+        wait_services_status(mirror_stack, {service.spec.name: "0/0"})
 
         # TODO: check there are no error reported in redis after the replayers are done
 

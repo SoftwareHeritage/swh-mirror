@@ -7,10 +7,8 @@ As of today, only docker swarm based deployment tests are available.
 
 ## docker swarm deployment tests
 
-This test is using
-[pytest-testinfra](https://github.com/pytest-dev/pytest-testinfra) to
-orchestrate the deployment and checks that are made against the replicated
-Software Heritage Archive.
+This test is using a Docker Swarm to orchestrate the deployment and checks that
+are made against the replicated Software Heritage Archive.
 
 The idea of this test is:
 - a test dataset is built by loading a few origins in a dedicated swh instance
