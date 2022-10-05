@@ -20,7 +20,7 @@ vault:
   url: http://vault:5005/
 
 allowed_hosts:
-  - appserver
+  - "*"
 
 debug: yes
 
