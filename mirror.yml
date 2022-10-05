@@ -254,8 +254,6 @@ services:
       # going above the number of partitions on the kafka cluster (so the 64
       # and 254 upper limits depending on the execution environment).
       replicas: 0
-      restart_policy:
-        condition: "none"
     networks:
       - swh-mirror
     env_file:
