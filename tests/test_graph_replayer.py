@@ -16,7 +16,7 @@ import msgpack
 from python_on_whales import DockerException
 import requests
 
-from .conftest import KAFKA_GROUPID, KAFKA_PASSWORD, KAFKA_USERNAME, LOGGER
+from .conftest import API_URL, KAFKA_GROUPID, KAFKA_PASSWORD, KAFKA_USERNAME, LOGGER
 
 INITIAL_SERVICES_STATUS = {
     "{}_amqp": "1/1",
@@ -43,7 +43,6 @@ INITIAL_SERVICES_STATUS = {
     "{}_scheduler-runner": "1/1",
 }
 SCALE = 2
-API_URL = "http://127.0.0.1:5081/api/1"
 
 
 def service_target_replicas(service):
