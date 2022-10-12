@@ -13,7 +13,6 @@ import pytest
 from python_on_whales import DockerClient, DockerException
 
 APIURL = "http://127.0.0.1:5080/api/1/"
-SWH_IMAGE_TAG = environ["SWH_IMAGE_TAG"]
 SRC_PATH = Path(__file__).resolve().parent.parent
 
 KAFKA_USERNAME = environ["SWH_MIRROR_TEST_KAFKA_USERNAME"]
@@ -80,7 +79,13 @@ def mirror_stack(request, docker_client, tmp_path_factory):
     for config in existing_configs:
         config.remove()
 
-    LOGGER.info("Deploy docker stack %s", stack_name)
+    image_tag = environ.get("SWH_IMAGE_TAG", None)
+    assert image_tag and image_tag != "latest", (
+        "SWH_IMAGE_TAG needs to be set to a build tag "
+        "to avoid any incompatibilities in the stack"
+    )
+
+    LOGGER.info("Deploy docker stack %s with SWH_IMAGE_TAG %s", stack_name, image_tag)
     docker_stack = docker_client.stack.deploy(stack_name, "mirror.yml")
 
     yield docker_stack
