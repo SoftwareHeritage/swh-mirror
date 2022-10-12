@@ -5,6 +5,7 @@ buildtime=$(date +%H%M%S)
 builddatetime="${builddate}-${buildtime}"
 
 username=$(docker info | grep Username | awk '{print $2}')
+options=$(getopt -l "write-env-file:" -o "" -- "$@") || exit 1
 
 for img in base web replayer test; do
     docker build \
@@ -24,6 +25,21 @@ for img in base web replayer test; do
 done
 
 #docker tag softwareheritage:base-${builddate} softwareheritage:latest
+
+eval set -- "$options"
+while true; do
+    case "$1" in
+        --write-env-file)
+            shift
+            echo "SWH_IMAGE_TAG=${builddatetime}" > "$1"
+            ;;
+        --)
+            shift
+            break
+            ;;
+    esac
+    shift
+done
 
 echo "Done creating images. You may want to use"
 echo "export SWH_IMAGE_TAG=${builddatetime}"
