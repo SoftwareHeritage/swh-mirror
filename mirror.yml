@@ -7,7 +7,7 @@ services:
     deploy:
       replicas: 1
     networks:
-      - swhtest-mirror
+      - swh-mirror
 
   storage-db:
     # the main storage database
@@ -22,7 +22,7 @@ services:
         constraints:
           - node.labels.org.softwareheritage.mirror.volumes.storage-db == true
     networks:
-      - swhtest-mirror
+      - swh-mirror
     command: ['-c', 'shared_buffers=4GB', '-c', 'effective_cache_size=4GB', '-c', 'random_page_cost=1.5', '-c', 'max_wal_size=4GB']
     environment:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
@@ -49,7 +49,7 @@ services:
         constraints:
           - node.labels.org.softwareheritage.mirror.volumes.web-db == true
     networks:
-      - swhtest-mirror
+      - swh-mirror
     command: ['-c', 'shared_buffers=4GB', '-c', 'effective_cache_size=4GB', '-c', 'random_page_cost=1.5', '-c', 'max_wal_size=4GB']
     environment:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
@@ -67,7 +67,7 @@ services:
     # the web app; serves both the web navigation interface and the public web API
     image: softwareheritage/web:${SWH_IMAGE_TAG:-latest}
     networks:
-      - swhtest-mirror
+      - swh-mirror
     configs:
       - source: web
         target: /etc/softwareheritage/config.yml
@@ -103,7 +103,7 @@ services:
         constraints:
           - node.labels.org.softwareheritage.mirror.volumes.objstorage == true
     networks:
-      - swhtest-mirror
+      - swh-mirror
     volumes:
       - "objstorage:/srv/softwareheritage/objects:rw,Z"
     configs:
@@ -127,7 +127,7 @@ services:
       # is upgraded in a consistent way
       replicas: 1
     networks:
-      - swhtest-mirror
+      - swh-mirror
     configs:
       - source: storage
         target: /etc/softwareheritage/config.yml
@@ -150,7 +150,7 @@ services:
   nginx:
     image: nginx
     networks:
-      - swhtest-mirror
+      - swh-mirror
     configs:
       - source: nginx
         target: /etc/nginx/nginx.conf
@@ -162,7 +162,7 @@ services:
   prometheus:
     image: prom/prometheus
     networks:
-      - swhtest-mirror
+      - swh-mirror
     depends_on:
     - prometheus-statsd-exporter
     command:
@@ -183,7 +183,7 @@ services:
   prometheus-statsd-exporter:
     image: prom/statsd-exporter
     networks:
-      - swhtest-mirror
+      - swh-mirror
     command:
       - "--statsd.mapping-config=/etc/prometheus/statsd-mapping.yml"
     configs:
@@ -200,7 +200,7 @@ services:
   grafana:
     image: grafana/grafana
     networks:
-      - swhtest-mirror
+      - swh-mirror
     depends_on:
     - prometheus
     environment:
@@ -236,7 +236,7 @@ services:
         constraints:
           - node.labels.org.softwareheritage.mirror.volumes.redis == true
     networks:
-      - swhtest-mirror
+      - swh-mirror
     command:
       - redis-server
       - --save 60 1
@@ -257,7 +257,7 @@ services:
       restart_policy:
         condition: "none"
     networks:
-      - swhtest-mirror
+      - swh-mirror
     env_file:
       - ./env/common-python.env
     environment:
@@ -277,7 +277,7 @@ services:
       # do not start replayers by default; see above
       replicas: 0
     networks:
-      - swhtest-mirror
+      - swh-mirror
     env_file:
       - ./env/common-python.env
     environment:
@@ -296,7 +296,7 @@ services:
   amqp:
     image: rabbitmq:3.6-management
     networks:
-      - swhtest-mirror
+      - swh-mirror
     ports:
       - 5072:5672
 
@@ -314,7 +314,7 @@ services:
         constraints:
           - node.labels.org.softwareheritage.mirror.volumes.web-db == true
     networks:
-      - swhtest-mirror
+      - swh-mirror
     command: ['-c', 'shared_buffers=4GB', '-c', 'effective_cache_size=4GB', '-c', 'random_page_cost=1.5', '-c', 'max_wal_size=4GB']
     environment:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
@@ -333,7 +333,7 @@ services:
     deploy:
       replicas: 1
     networks:
-      - swhtest-mirror
+      - swh-mirror
     env_file:
       - ./env/common-python.env
     configs:
@@ -357,7 +357,7 @@ services:
     deploy:
       replicas: 1
     networks:
-      - swhtest-mirror
+      - swh-mirror
     env_file:
       - ./env/common-python.env
       - ./env/celery-worker.env
@@ -374,7 +374,7 @@ services:
   mailhog:
     image: mailhog/mailhog
     networks:
-      - swhtest-mirror
+      - swh-mirror
 
 ### scheduler services
 
@@ -390,7 +390,7 @@ services:
         constraints:
           - node.labels.org.softwareheritage.mirror.volumes.web-db == true
     networks:
-      - swhtest-mirror
+      - swh-mirror
     command: ['-c', 'shared_buffers=4GB', '-c', 'effective_cache_size=4GB', '-c', 'random_page_cost=1.5', '-c', 'max_wal_size=4GB']
     environment:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
@@ -409,7 +409,7 @@ services:
     deploy:
       replicas: 1
     networks:
-      - swhtest-mirror
+      - swh-mirror
     configs:
       - source: scheduler
         target: /etc/softwareheritage/config.yml
@@ -432,7 +432,7 @@ services:
     deploy:
       replicas: 1
     networks:
-      - swhtest-mirror
+      - swh-mirror
     configs:
       - source: scheduler
         target: /etc/softwareheritage/config.yml
@@ -455,7 +455,7 @@ services:
     deploy:
       replicas: 1
     networks:
-      - swhtest-mirror
+      - swh-mirror
     configs:
       - source: scheduler
         target: /etc/softwareheritage/config.yml
@@ -529,6 +529,6 @@ configs:
 
 
 networks:
-  swhtest-mirror:
+  swh-mirror:
     driver: overlay
     attachable: true

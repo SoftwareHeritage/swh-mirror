@@ -150,7 +150,7 @@ If you want to shut them all down, you can use:
 
 To run a shell in an image in the Swarm context, use the following:
 
-    docker run --network=swhtest_mirror0_swhtest-mirror -ti --env-file env/common-python.env --env STATSD_TAGS="role:content-replayer,hostname:${HOSTNAME}"  -v /tmp/pytest-of-lunar/pytest-current/mirrorcurrent/conf/content-replayer.yml:/etc/softwareheritage/config.yml  softwareheritage/replayer:20220915-163058  shell
+    docker run --network=swhtest_mirror0_swh-mirror -ti --env-file env/common-python.env --env STATSD_TAGS="role:content-replayer,hostname:${HOSTNAME}"  -v /tmp/pytest-of-lunar/pytest-current/mirrorcurrent/conf/content-replayer.yml:/etc/softwareheritage/config.yml  softwareheritage/replayer:20220915-163058  shell
 
 ### Some containers are never started
 
