@@ -159,10 +159,11 @@ If you notice that some container stay at 0 replicas in `docker service ls`, it 
 Most likely, you are missing the labels locating the volumes needed by the containers. You might want to run:
 
     docker node update $HOSTNAME \
-      --label-add org.softwareheritage.mirror.volumes.storage-db=true \
-      --label-add org.softwareheritage.mirror.volumes.web-db=true \
+      --label-add org.softwareheritage.mirror.monitoring=true \
       --label-add org.softwareheritage.mirror.volumes.objstorage=true \
-      --label-add org.softwareheritage.mirror.volumes.redis=true
+      --label-add org.softwareheritage.mirror.volumes.redis=true \
+      --label-add org.softwareheritage.mirror.volumes.storage-db=true \
+      --label-add org.softwareheritage.mirror.volumes.web-db=true
 
 ### SWH services keep restarting
 
