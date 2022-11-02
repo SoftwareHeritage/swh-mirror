@@ -9,22 +9,19 @@ builddatetime="${builddate}-${buildtime}"
 username=$(docker info | grep Username | awk '{print $2}')
 options=$(getopt -l "write-env-file:" -o "" -- "$@") || exit 1
 
-for img in base web replayer; do
-    docker build \
-           --build-arg SWH_VER=${builddatetime} \
-           --build-arg pythonversion=3.7 \
-           --tag softwareheritage/${img}:${builddatetime} \
-           --target swh-${img} \
-           .
-    docker tag softwareheritage/${img}:${builddatetime} softwareheritage/${img}:${builddate}
-    docker tag softwareheritage/${img}:${builddate} softwareheritage/${img}:latest
-  if [[ -n "${username}" ]] && [[ "${PUBLISH:=no}" = "yes" ]]; then
-      echo "Publishing image softwareheritage:${img}-${builddate} on docker hub"
-      docker push softwareheritage/${img}:${builddatetime}
-      docker push softwareheritage/${img}:${builddate}
-      docker push softwareheritage/${img}:latest
-  fi
-done
+docker build \
+       --build-arg SWH_VER=${builddatetime} \
+       --build-arg pythonversion=3.7 \
+       --tag softwareheritage/mirror:${builddatetime} \
+       --target swh-mirror \
+       .
+
+docker tag softwareheritage/mirror:${builddatetime} softwareheritage/mirror:latest
+if [[ -n "${username}" ]] && [[ "${PUBLISH:=no}" = "yes" ]]; then
+    echo "Publishing image softwareheritage/mirror:${builddatetime} on docker hub"
+    docker push softwareheritage/mirror:${builddatetime}
+    docker push softwareheritage/mirror:latest
+fi
 
 eval set -- "$options"
 while true; do

@@ -65,13 +65,13 @@ services:
 
   web:
     # the web app; serves both the web navigation interface and the public web API
-    image: softwareheritage/web:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
     networks:
       - swh-mirror
     configs:
       - source: web
         target: /etc/softwareheritage/config.yml
-    command: serve
+    command: web
     environment:
       PORT: "5004"
       PGHOST: web-db
@@ -90,7 +90,7 @@ services:
     # the swh-objstorage backend service; this example configuration uses a simple
     # filesystem-based pathslicing implementation of the swh-objstorage: see
     # https://docs.softwareheritage.org/devel/apidoc/swh.objstorage.backends.pathslicing.html
-    image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
     deploy:
       # needed to allow actual and dynamic load balancing
       endpoint_mode: dnsrr
@@ -118,7 +118,7 @@ services:
 
   storage:
     # the swh-storage backend service; using postgresql (storage-db) as backend
-    image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
     deploy:
       # needed to allow actual and dynammic load balancing
       endpoint_mode: dnsrr
@@ -247,7 +247,7 @@ services:
       - redis:/data
 
   graph-replayer:
-    image: softwareheritage/replayer:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
     deploy:
       # do not start replayers by default once the remaining of the stack is
       # running as expected, bump this value; expected real-life values should
@@ -272,7 +272,7 @@ services:
       - redis
 
   content-replayer:
-    image: softwareheritage/replayer:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
     deploy:
       # do not start replayers by default; see above
       replicas: 0
@@ -329,7 +329,7 @@ services:
         mode: 0400
 
   vault:
-    image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
     deploy:
       replicas: 1
     networks:
@@ -353,7 +353,7 @@ services:
         mode: 0400
 
   vault-worker:
-    image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
     deploy:
       replicas: 1
     networks:
@@ -405,7 +405,7 @@ services:
         mode: 0400
 
   scheduler:
-    image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
     deploy:
       replicas: 1
     networks:
@@ -428,7 +428,7 @@ services:
         mode: 0400
 
   scheduler-listener:
-    image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
     deploy:
       replicas: 1
     networks:
@@ -451,7 +451,7 @@ services:
         mode: 0400
 
   scheduler-runner:
-    image: softwareheritage/base:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
     deploy:
       replicas: 1
     networks:

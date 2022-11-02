@@ -106,6 +106,54 @@ case "$1" in
              python3 -m swh --log-level ${LOGLEVEL:-INFO} scheduler -C ${SWH_CONFIG_FILENAME} $@
         ;;
 
+    "graph-replayer")
+        wait-for-it storage:5002
+        echo "Starting the SWH mirror graph replayer"
+        exec python3 -m swh --log-level ${LOG_LEVEL:-WARNING} storage replay
+        ;;
+
+    "content-replayer")
+        wait-for-it objstorage:5003
+        echo "Starting the SWH mirror content replayer"
+        exec python3 -m swh --log-level ${LOG_LEVEL:-WARNING} objstorage replay
+        ;;
+
+    "web")
+        wait_pgsql
+
+        create_admin_script="
+from django.contrib.auth import get_user_model;
+
+username = 'admin';
+password = 'admin';
+email = 'admin@swh-web.org';
+
+User = get_user_model();
+
+if not User.objects.filter(username = username).exists():
+    User.objects.create_superuser(username, email, password);
+"
+
+        echo "Migrating db using ${DJANGO_SETTINGS_MODULE}"
+        django-admin migrate --settings=${DJANGO_SETTINGS_MODULE}
+
+        echo "Creating admin user"
+        echo "$create_admin_script" | python3 -m swh.web.manage shell
+
+        echo "starting the swh-web server"
+        mkdir -p /var/run/gunicorn/swh/web
+        python3 -m gunicorn \
+                --bind 0.0.0.0:5004 \
+                --bind unix:/var/run/gunicorn/swh/web/sock \
+                --threads 2 \
+                --workers 2 \
+                --timeout 3600 \
+                --access-logfile '-' \
+                --config 'python:swh.web.gunicorn_config' \
+                --statsd-host=prometheus-statsd-exporter:9125 \
+                --statsd-prefix=service.app.web  \
+                'django.core.wsgi:get_wsgi_application()'
+        ;;
     *)
         exec $@
         ;;

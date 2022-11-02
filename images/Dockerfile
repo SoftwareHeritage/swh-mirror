@@ -49,7 +49,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
   libsystemd-dev \
   gcc \
   iputils-ping \
-  openjdk-11-jre \
   pkg-config \
   pv \
   postgresql-client \
@@ -84,10 +83,10 @@ RUN pip install -r /srv/softwareheritage/requirements.txt && \
 RUN pip freeze > /srv/softwareheritage/pip-freeze.txt
 
 ##################################
-# COMMOM image
+# MIRROR image
 ##################################
 
-FROM python:${pythonversion:-3.7}-slim as swh-common
+FROM python:${pythonversion:-3.7}-slim as swh-mirror
 LABEL maintainer="Software Heritage <sysop@softwareheritage.org>"
 
 RUN export DEBIAN_FRONTEND=noninteractive && \
@@ -139,14 +138,9 @@ RUN chown swh:swh /srv/softwareheritage /var/lib/swh  /var/run/gunicorn/swh /etc
 USER swh
 COPY --from=swh-builder /srv /srv
 
-
-##################################
-# BASE services
-##################################
-
-FROM swh-common as swh-base
 ARG SWH_VER
 ENV SWH_VER=${SWH_VER}
+ENV DJANGO_SETTINGS_MODULE=swh.web.settings.production
 
 COPY conf/logconfig.ini /etc/gunicorn/logconfig.ini
 COPY conf/gunicorn.cfg /etc/gunicorn/swh.cfg
@@ -158,43 +152,5 @@ USER root
 RUN chown -R swh:swh  /srv/softwareheritage/utils
 RUN chmod +x /srv/softwareheritage/utils/*.sh
 
-COPY base/entrypoint.sh /
-ENTRYPOINT ["/entrypoint.sh"]
-
-##################################
-# WEB
-##################################
-FROM swh-common as swh-web
-ARG SWH_VER
-ENV SWH_VER=${SWH_VER}
-
-ENV DJANGO_SETTINGS_MODULE=swh.web.settings.production
-
-COPY conf/logconfig.ini /etc/gunicorn/logconfig.ini
-COPY conf/gunicorn.cfg /etc/gunicorn/swh.cfg
-COPY tools/*.sh /srv/softwareheritage/utils/
-COPY tools/*.sql /srv/softwareheritage/utils/
-
-USER root
-RUN chown -R swh:swh  /srv/softwareheritage/utils
-RUN chmod +x /srv/softwareheritage/utils/*.sh
-
-COPY web/entrypoint.sh /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
-
-##################################
-# Mirror (replayer)
-##################################
-FROM swh-common as swh-replayer
-ARG SWH_VER
-ENV SWH_VER=${SWH_VER}
-
-COPY tools/*.sh /srv/softwareheritage/utils/
-COPY tools/*.sql /srv/softwareheritage/utils/
-
-USER root
-RUN chown -R swh:swh  /srv/softwareheritage/utils
-RUN chmod +x /srv/softwareheritage/utils/*.sh
-
-COPY replayer/entrypoint.sh /
+COPY entrypoint.sh /
 ENTRYPOINT ["/entrypoint.sh"]
