@@ -12,7 +12,7 @@ options=$(getopt -l "write-env-file:" -o "" -- "$@") || exit 1
 for img in base web replayer; do
     docker build \
            --build-arg SWH_VER=${builddatetime} \
-           --build-arg debianversion=buster \
+           --build-arg pythonversion=3.7 \
            --tag softwareheritage/${img}:${builddatetime} \
            --target swh-${img} \
            .
@@ -25,8 +25,6 @@ for img in base web replayer; do
       docker push softwareheritage/${img}:latest
   fi
 done
-
-#docker tag softwareheritage:base-${builddate} softwareheritage:latest
 
 eval set -- "$options"
 while true; do

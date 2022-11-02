@@ -1,0 +1,14 @@
+swh-core[logging,db,http]
+swh-model[cli]
+swh-counters
+swh-deposit[server]
+swh-graphql
+swh-indexer
+swh-journal
+swh-storage[journal]
+swh-objstorage[azure,libcloud]
+swh-objstorage-replayer
+swh-scheduler[journal]
+swh-search
+swh-vault[graph]
+swh-web

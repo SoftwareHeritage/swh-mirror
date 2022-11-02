@@ -83,6 +83,7 @@ services:
     secrets:
       - source: swh-mirror-web-db-password
         target: postgres-password
+        uid: '1000'
         mode: 0400
 
   objstorage:
@@ -142,6 +143,7 @@ services:
     secrets:
       - source: swh-mirror-storage-db-password
         target: postgres-password
+        uid: '1000'
         mode: 0400
     command: ["rpc-server", "storage"]
     depends_on:
@@ -347,7 +349,7 @@ services:
     secrets:
       - source: swh-mirror-vault-db-password
         target: postgres-password
-        uid: '999'
+        uid: '1000'
         mode: 0400
 
   vault-worker:
@@ -422,7 +424,7 @@ services:
     secrets:
       - source: swh-mirror-scheduler-db-password
         target: postgres-password
-        uid: '999'
+        uid: '1000'
         mode: 0400
 
   scheduler-listener:
@@ -445,7 +447,7 @@ services:
     secrets:
       - source: swh-mirror-scheduler-db-password
         target: postgres-password
-        uid: '999'
+        uid: '1000'
         mode: 0400
 
   scheduler-runner:
@@ -468,7 +470,7 @@ services:
     secrets:
       - source: swh-mirror-scheduler-db-password
         target: postgres-password
-        uid: '999'
+        uid: '1000'
         mode: 0400
 
 

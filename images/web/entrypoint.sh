@@ -2,6 +2,16 @@
 
 set -e
 
+if [[ `id -u` == "0" ]] ; then
+	# init script run as root
+
+	# ensure volumes mounted in /srv/softwareheritage belong to swh
+	chown swh:swh /srv/softwareheritage/*
+
+	# now run this script as swh
+	HOME=/srv/softwareheritage exec setpriv --reuid=swh --regid=swh --init-groups $0 $@
+fi
+
 source /srv/softwareheritage/utils/pgsql.sh
 
 # generate the pgservice file if any
@@ -41,7 +51,7 @@ if not User.objects.filter(username = username).exists():
 
     echo "starting the swh-web server"
     mkdir -p /var/run/gunicorn/swh/web
-    gunicorn3 \
+    python3 -m gunicorn \
          --bind 0.0.0.0:5004 \
          --bind unix:/var/run/gunicorn/swh/web/sock \
          --threads 2 \
