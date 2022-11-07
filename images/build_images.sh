@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 builddate=$(date +%Y%m%d)
 buildtime=$(date +%H%M%S)
 builddatetime="${builddate}-${buildtime}"
