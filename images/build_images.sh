@@ -7,7 +7,7 @@ builddatetime="${builddate}-${buildtime}"
 username=$(docker info | grep Username | awk '{print $2}')
 options=$(getopt -l "write-env-file:" -o "" -- "$@") || exit 1
 
-for img in base web replayer test; do
+for img in base web replayer; do
     docker build \
            --build-arg SWH_VER=${builddatetime} \
            --build-arg debianversion=buster \
