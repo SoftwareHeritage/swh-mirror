@@ -112,6 +112,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
   apt-get update && \
   apt-get install -y \
     --no-install-recommends \
+    gunicorn \
     python3-typing-extensions/$(lsb_release -sc)-backports \
     python3-swh.journal \
     python3-swh.objstorage \
