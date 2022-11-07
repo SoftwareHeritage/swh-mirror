@@ -37,12 +37,12 @@ ENV SWH_VER=${SWH_VER}
 RUN export DEBIAN_FRONTEND=noninteractive && \
   apt-get update && \
   apt-get install -y \
-    -t $(lsb_release -sc)-backports \
     --no-install-recommends \
 	# git is required for the vault-worker... maybe use a dedicated image gor this
 	git \
     gunicorn \
     postgresql-client \
+    python3-typing-extensions/$(lsb_release -sc)-backports \
     python3-dulwich \
     python3-swh.indexer \
     python3-swh.indexer.storage \
@@ -82,9 +82,10 @@ ENV DJANGO_SETTINGS_MODULE=swh.web.settings.production
 RUN export DEBIAN_FRONTEND=noninteractive && \
   apt-get update && \
   apt-get install -y --no-install-recommends \
-    -t $(lsb_release -sc)-backports \
     gunicorn \
     postgresql-client \
+    python3-typing-extensions/$(lsb_release -sc)-backports \
+    python3-django/$(lsb_release -sc)-backports \
     python3-magic \
     python3-swh.web \
     && \
@@ -110,8 +111,8 @@ ENV SWH_VER=${SWH_VER}
 RUN export DEBIAN_FRONTEND=noninteractive && \
   apt-get update && \
   apt-get install -y \
-    -t $(lsb_release -sc)-backports \
     --no-install-recommends \
+    python3-typing-extensions/$(lsb_release -sc)-backports \
     python3-swh.journal \
     python3-swh.objstorage \
     python3-swh.objstorage.replayer \
