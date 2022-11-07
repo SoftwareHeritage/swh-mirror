@@ -40,7 +40,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     --no-install-recommends \
 	# git is required for the vault-worker... maybe use a dedicated image gor this
 	git \
-    gunicorn \
+    gunicorn/$(lsb_release -sc)-backports \
     postgresql-client \
     python3-typing-extensions/$(lsb_release -sc)-backports \
     python3-dulwich \
@@ -82,7 +82,7 @@ ENV DJANGO_SETTINGS_MODULE=swh.web.settings.production
 RUN export DEBIAN_FRONTEND=noninteractive && \
   apt-get update && \
   apt-get install -y --no-install-recommends \
-    gunicorn \
+    gunicorn/$(lsb_release -sc)-backports \
     postgresql-client \
     python3-typing-extensions/$(lsb_release -sc)-backports \
     python3-django/$(lsb_release -sc)-backports \
@@ -112,7 +112,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
   apt-get update && \
   apt-get install -y \
     --no-install-recommends \
-    gunicorn \
+    gunicorn/$(lsb_release -sc)-backports \
     python3-typing-extensions/$(lsb_release -sc)-backports \
     python3-swh.journal \
     python3-swh.objstorage \
