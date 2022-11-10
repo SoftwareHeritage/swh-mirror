@@ -103,19 +103,24 @@ case "$1" in
 
         echo "Starting the swh-scheduler $1"
         exec wait-for-it amqp:5672 -s --timeout=0 -- \
-             python3 -m swh --log-level ${LOGLEVEL:-INFO} scheduler -C ${SWH_CONFIG_FILENAME} $@
+             python3 -m swh --log-level ${LOGLEVEL:-INFO} \
+	     scheduler -C ${SWH_CONFIG_FILENAME} $@
         ;;
 
     "graph-replayer")
+        shift
         wait-for-it storage:5002
         echo "Starting the SWH mirror graph replayer"
-        exec python3 -m swh --log-level ${LOG_LEVEL:-WARNING} storage replay
+        exec python3 -m swh --log-level ${LOG_LEVEL:-WARNING} \
+		storage replay $@
         ;;
 
     "content-replayer")
+        shift
         wait-for-it objstorage:5003
         echo "Starting the SWH mirror content replayer"
-        exec python3 -m swh --log-level ${LOG_LEVEL:-WARNING} objstorage replay
+        exec python3 -m swh --log-level ${LOG_LEVEL:-WARNING} \
+		objstorage replay $@
         ;;
 
     "web")
