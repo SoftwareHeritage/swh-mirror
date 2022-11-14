@@ -263,7 +263,7 @@ services:
     env_file:
       - ./env/common-python.env
     environment:
-      STATSD_TAGS: 'role:graph-replayer,hostname:${HOSTNAME}'
+      STATSD_TAGS: 'role:graph-replayer,hostname:$${HOSTNAME}'
     configs:
       - source: graph-replayer
         target: /etc/softwareheritage/config.yml
@@ -283,7 +283,7 @@ services:
     env_file:
       - ./env/common-python.env
     environment:
-      STATSD_TAGS: 'role:content-replayer,hostname:${HOSTNAME}'
+      STATSD_TAGS: 'role:content-replayer,hostname:$${HOSTNAME}'
     configs:
       - source: content-replayer
         target: /etc/softwareheritage/config.yml
