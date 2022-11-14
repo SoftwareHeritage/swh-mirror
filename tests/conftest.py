@@ -12,7 +12,6 @@ from uuid import uuid4
 import pytest
 from python_on_whales import DockerClient, DockerException
 
-APIURL = "http://127.0.0.1:5080/api/1/"
 SRC_PATH = Path(__file__).resolve().parent.parent
 
 KAFKA_USERNAME = environ["SWH_MIRROR_TEST_KAFKA_USERNAME"]
@@ -20,7 +19,7 @@ KAFKA_PASSWORD = environ["SWH_MIRROR_TEST_KAFKA_PASSWORD"]
 KAFKA_BROKER = environ["SWH_MIRROR_TEST_KAFKA_BROKER"]
 KAFKA_GROUPID = f"{KAFKA_USERNAME}-{uuid4()}"
 OBJSTORAGE_URL = environ["SWH_MIRROR_TEST_OBJSTORAGE_URL"]
-API_URL = environ["SWH_MIRROR_TEST_API_URL"]
+API_URL = environ.get("SWH_MIRROR_TEST_API_URL", "http://127.0.0.1:5080/api/1")
 WFI_TIMEOUT = 60
 
 LOGGER = logging.getLogger(__name__)
