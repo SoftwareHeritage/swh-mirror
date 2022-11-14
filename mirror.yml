@@ -535,3 +535,7 @@ networks:
   swh-mirror:
     driver: overlay
     attachable: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.1.0.0/16
