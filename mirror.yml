@@ -201,6 +201,9 @@ services:
     configs:
       - source: prometheus-statsd-exporter
         target: /etc/prometheus/statsd-mapping.yml
+
+  grafana:
+    image: grafana/grafana
     deploy:
       # we want only one replica of this service in the whole cluster
       replicas: 1
@@ -208,9 +211,6 @@ services:
         max_replicas_per_node: 1
         constraints:
           - node.labels.org.softwareheritage.mirror.monitoring == true
-
-  grafana:
-    image: grafana/grafana
     networks:
       - swh-mirror
     depends_on:
@@ -228,13 +228,8 @@ services:
         target: /var/lib/grafana/dashboards/content-replayer.json
       - source: grafana-dashboards-graph-replayer
         target: /var/lib/grafana/dashboards/graph-replayer.json
-    deploy:
-      # we want only one replica of this service in the whole cluster
-      replicas: 1
-      placement:
-        max_replicas_per_node: 1
-        constraints:
-          - node.labels.org.softwareheritage.mirror.monitoring == true
+    volumes:
+      - "grafana:/var/lib/grafana:rw,Z"
 
 ## replayer services
 
@@ -492,6 +487,8 @@ volumes:
   vault-db:
   web-db:
   prometheus:
+  grafana:
+
 
 secrets:
   swh-mirror-storage-db-password:
@@ -502,7 +499,6 @@ secrets:
     external: true
   swh-mirror-scheduler-db-password:
     external: true
-
 
 configs:
   storage:
