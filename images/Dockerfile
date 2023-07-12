@@ -1,5 +1,5 @@
-ARG pythonversion=3.7
-FROM python:${pythonversion:-3.7} as swh-builder
+ARG pythonversion=3.10
+FROM python:${pythonversion:-3.10} as swh-builder
 LABEL maintainer="Software Heritage <sysop@softwareheritage.org>"
 ENV PROJECT_NAME swh-base
 
@@ -34,7 +34,7 @@ RUN . /etc/os-release && \
   > /etc/apt/sources.list.d/yarnpkg.list && \
   curl -fsSL ${YARN_GPG_KEY} | gpg --dearmor > ${YARN_KEYRING}
 
-# warning: the py:3.7 image comes with python3.9 installed from debian; do not
+# warning: the py:3.10 image comes with python3.9 installed from debian; do not
 # add debian python packages here, they would not be usable for the py37 based
 # environment used in this image.
 RUN export DEBIAN_FRONTEND=noninteractive && \
@@ -86,7 +86,7 @@ RUN pip freeze > /srv/softwareheritage/pip-freeze.txt
 # MIRROR image
 ##################################
 
-FROM python:${pythonversion:-3.7}-slim as swh-mirror
+FROM python:${pythonversion:-3.10}-slim as swh-mirror
 LABEL maintainer="Software Heritage <sysop@softwareheritage.org>"
 
 RUN export DEBIAN_FRONTEND=noninteractive && \
@@ -107,8 +107,8 @@ RUN . /etc/os-release && \
   > /etc/apt/sources.list.d/pgdg.list && \
   curl -fsSL ${PGDG_GPG_KEY} | gpg --dearmor > ${PGDG_KEYRING}
 
-# warning: the py:3.7 image comes with python3.9 installed from debian; do not
-# add debian python packages here, they would not be usable for the py37 based
+# warning: the py:3.10 image comes with python3.11 installed from debian; do not
+# add debian python packages here, they would not be usable for the py310 based
 # environment used in this image.
 RUN export DEBIAN_FRONTEND=noninteractive && \
   apt-get update && apt-get upgrade -y && \

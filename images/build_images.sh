@@ -11,7 +11,7 @@ options=$(getopt -l "write-env-file:" -o "" -- "$@") || exit 1
 
 docker build \
        --build-arg SWH_VER=${builddatetime} \
-       --build-arg pythonversion=3.7 \
+       --build-arg pythonversion=3.10 \
        --tag softwareheritage/mirror:${builddatetime} \
        --target swh-mirror \
        .

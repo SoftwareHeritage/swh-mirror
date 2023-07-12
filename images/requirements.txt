@@ -9,6 +9,7 @@ swh-storage[journal]
 swh-objstorage[azure,libcloud]
 swh-objstorage-replayer
 swh-scheduler[journal]
+swh-scrubber
 swh-search
 swh-vault[graph]
 swh-web
