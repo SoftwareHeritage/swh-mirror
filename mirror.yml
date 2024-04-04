@@ -56,14 +56,14 @@ services:
       - '--random_page_cost=1.5'
       - '--max_wal_size=4GB'
     environment:
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password-swh-web
       POSTGRES_USER: swh
       POSTGRES_DB: swh-web
     volumes:
       - "web-db:/var/lib/postgresql/data:rw,Z"
     secrets:
       - source: swh-mirror-web-db-password
-        target: postgres-password
+        target: postgres-password-swh-web
         uid: '999'
         mode: 0400
 
@@ -77,16 +77,17 @@ services:
         target: /etc/softwareheritage/config.yml
     command: web
     environment:
+      PGCFG_0: swh-web
+      PGHOST_0: web-db
+      PGUSER_0: swh
+      POSTGRES_DB_0: swh-web
       PORT: "5004"
-      PGHOST: web-db
-      PGUSER: swh
-      POSTGRES_DB: swh-web
     depends_on:
       - web-db
       - memcache
     secrets:
       - source: swh-mirror-web-db-password
-        target: postgres-password
+        target: postgres-password-swh-web
         uid: '1000'
         mode: 0400
 
@@ -146,7 +147,7 @@ services:
       - ./env/common-python.env
     secrets:
       - source: swh-mirror-storage-db-password
-        target: postgres-password
+        target: postgres-password-swh-storage
         uid: '1000'
         mode: 0400
     command: ["rpc-server", "storage"]
@@ -238,7 +239,7 @@ services:
 ## replayer services
 
   redis:
-    image: redis:6.2.6
+    image: redis:6.2
     deploy:
       # we want only one replica of this service in the whole cluster
       replicas: 1
@@ -290,12 +291,13 @@ services:
     env_file:
       - ./env/common-python.env
     environment:
-      STATSD_TAGS: 'role:content-replayer,hostname:$${HOSTNAME}'
+      STATSD_TAGS: 'role:content-replayer,hostname:$${X_NODE_HOSTNAME}'
+      LOG_LEVEL: 'INFO --log-level azure:ERROR'
     configs:
       - source: content-replayer
         target: /etc/softwareheritage/config.yml
     command:
-      - content-replayer
+      - content-replayer --concurrency=32
     depends_on:
       - objstorage
       - redis
@@ -353,15 +355,16 @@ services:
       - source: vault
         target: /etc/softwareheritage/config.yml
     environment:
-      PGHOST: vault-db
-      PGUSER: swh
-      POSTGRES_DB: swh-vault
+      PGCFG_0: swh-vault
+      PGHOST_0: vault-db
+      PGUSER_0: swh
+      POSTGRES_DB_0: swh-vault
       PORT: "5005"
-      LOG_LEVEL: DEBUG
+      LOG_LEVEL: INFO
     command: ["rpc-server",  "vault"]
     secrets:
       - source: swh-mirror-vault-db-password
-        target: postgres-password
+        target: postgres-password-swh-vault
         uid: '1000'
         mode: 0400
 
@@ -376,7 +379,7 @@ services:
       - ./env/celery-worker.env
     environment:
       SWH_WORKER_INSTANCE: vault
-      LOG_LEVEL: DEBUG
+      LOG_LEVEL: INFO
     configs:
       - source: vault-worker
         target: /etc/softwareheritage/config.yml
@@ -432,14 +435,15 @@ services:
     env_file:
       - ./env/common-python.env
     environment:
-      PGHOST: scheduler-db
-      PGUSER: swh
-      POSTGRES_DB: swh-scheduler
+      PGCFG_0: swh-scheduler
+      PGHOST_0: scheduler-db
+      PGUSER_0: swh
+      POSTGRES_DB_0: swh-scheduler
       PORT: "5008"
     command: ["rpc-server",  "scheduler"]
     secrets:
       - source: swh-mirror-scheduler-db-password
-        target: postgres-password
+        target: postgres-password-swh-scheduler
         uid: '1000'
         mode: 0400
 
@@ -456,13 +460,14 @@ services:
       - ./env/common-python.env
     environment:
       SWH_WORKER_INSTANCE: scheduler
-      PGHOST: scheduler-db
-      PGUSER: swh
-      POSTGRES_DB: swh-scheduler
+      PGCFG_0: swh-scheduler
+      PGHOST_0: scheduler-db
+      PGUSER_0: swh
+      POSTGRES_DB_0: swh-scheduler
     command: ["scheduler", "start-listener"]
     secrets:
       - source: swh-mirror-scheduler-db-password
-        target: postgres-password
+        target: postgres-password-swh-scheduler
         uid: '1000'
         mode: 0400
 
@@ -479,13 +484,14 @@ services:
       - ./env/common-python.env
     environment:
       SWH_WORKER_INSTANCE: scheduler
-      PGHOST: scheduler-db
-      PGUSER: swh
-      POSTGRES_DB: swh-scheduler
+      PGCFG_0: swh-scheduler
+      PGHOST_0: scheduler-db
+      PGUSER_0: swh
+      POSTGRES_DB_0: swh-scheduler
     command: ["scheduler", "start-runner", "--period", "10"]
     secrets:
       - source: swh-mirror-scheduler-db-password
-        target: postgres-password
+        target: postgres-password-swh-scheduler
         uid: '1000'
         mode: 0400
 

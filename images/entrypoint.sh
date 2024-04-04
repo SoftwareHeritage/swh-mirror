@@ -12,17 +12,16 @@ if [[ `id -u` == "0" ]] ; then
     HOME=/srv/softwareheritage exec setpriv --reuid=swh --regid=swh --init-groups $0 $@
 fi
 
+echo "Loading pgsql helper tools"
 source /srv/softwareheritage/utils/pgsql.sh
 
 if [ -v SWH_CONFIG_FILENAME ]; then
     python3 /srv/softwareheritage/utils/init_pathslicer_root.py --init
 fi
 
-# generate the pgservice file if any
-if [ -f /run/secrets/postgres-password ]; then
-    POSTGRES_PASSWORD_FILE=/run/secrets/postgres-password
-    setup_pgsql
-fi
+# fill .pg_services.conf and .pgpass from PGCFG_n config entries
+echo "Configuring DB access files (if any)"
+setup_pgsql
 
 # For debugging purpose
 if [ -f /etc/softwareheritage/config.yml ]; then
@@ -31,7 +30,6 @@ if [ -f /etc/softwareheritage/config.yml ]; then
 fi
 
 echo "###################"
-
 echo "Arguments: $@"
 
 case "$1" in
@@ -71,11 +69,11 @@ case "$1" in
             echo Database setup
             if ! check_pgsql_db_created; then
                 echo Creating database and extensions...
-                python3 -m swh db create --db-name ${POSTGRES_DB} $1
+                python3 -m swh db create --dbname ${POSTGRES_DB} $1
             fi
-            echo Initializing the database...
+            echo Initializing the database ${POSTGRES_DB}...
             echo " step 1: init-admin"
-            python3 -m swh db init-admin --db-name ${POSTGRES_DB} $1
+            python3 -m swh db init-admin --dbname postgresql:///?service=${NAME} $1
             echo " step 2: init"
             python3 -m swh db init --flavor ${FLAVOR:-default} $1
             echo " step 3: upgrade"
@@ -97,7 +95,7 @@ case "$1" in
 
     "scheduler")
         shift
-        wait_pgsql
+        wait_pgsql template1
 
         wait-for-it scheduler:5008 -s --timeout=0
 
@@ -124,7 +122,7 @@ case "$1" in
         ;;
 
     "web")
-        wait_pgsql
+        wait_pgsql template1
 
         create_admin_script="
 from django.contrib.auth import get_user_model;
@@ -158,6 +156,40 @@ if not User.objects.filter(username = username).exists():
                 --statsd-host=prometheus-statsd-exporter:9125 \
                 --statsd-prefix=service.app.web  \
                 'django.core.wsgi:get_wsgi_application()'
+        ;;
+    "scrubber")
+        shift
+	# expected arguments: entity type, number of partitions (as nbits)
+	OBJTYPE=$1
+	shift
+	NBITS=$1
+	shift
+	CFGNAME="${OBJTYPE}_${NBITS}"
+	
+        wait-for-it storage:5002
+        if [ -v POSTGRES_DB ]; then
+            wait_pgsql template1
+
+            echo Database setup
+            if ! check_pgsql_db_created; then
+                echo Creating database and extensions...
+                python3 -m swh db create --dbname ${POSTGRES_DB} scrubber
+            fi
+            echo Initializing the database ${POSTGRES_DB}...
+            echo " step 1: init-admin"
+            python3 -m swh db init-admin --dbname postgresql:///?service=${NAME} scrubber
+            echo " step 2: init"
+            python3 -m swh db init scrubber
+            echo " step 3: upgrade"
+            python3 -m swh db upgrade --non-interactive scrubber
+
+	    # now create the scrubber config, if needed
+	    python3 -m swh scrubber check init --object-type ${OBJTYPE} --nb-partitions $(( 2 ** ${NBITS} )) --name ${CFGNAME} && echo "Created scrubber configuration ${CFGNAME}" || echo "Configuration ${CFGNAME} already exists (ignored)."
+        fi
+
+        echo "Starting a SWH storage scrubber ${CFGNAME}"
+        exec python3 -m swh --log-level ${LOG_LEVEL:-WARNING} \
+		scrubber check storage ${CFGNAME} $@
         ;;
     *)
         exec $@

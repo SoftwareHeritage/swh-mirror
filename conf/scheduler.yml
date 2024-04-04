@@ -1,6 +1,6 @@
 scheduler:
   cls: postgresql
-  db: postgresql:///?service=swh
+  db: postgresql:///?service=swh-scheduler
 
 celery:
   broker_heartbeat: null
