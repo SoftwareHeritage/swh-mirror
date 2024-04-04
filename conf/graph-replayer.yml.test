@@ -3,7 +3,7 @@
 storage:
   cls: pipeline
   steps:
-  - cls: filter
+  - cls: buffer
   - cls: tenacious
     error_rate_limit:
       # fail after 10 errors for 1000 operations
