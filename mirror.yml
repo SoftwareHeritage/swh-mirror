@@ -27,8 +27,7 @@ services:
     environment:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
       POSTGRES_USER: swh
-      POSTGRES_DB:
-      # unset POSTGRES_DB: we're handling db creation ourselves in the backend
+      POSTGRES_DB: swh-storage
     volumes:
       - "storage-db:/var/lib/postgresql/data:rw,Z"
     secrets:
@@ -138,10 +137,11 @@ services:
       - source: storage
         target: /etc/softwareheritage/config.yml
     environment:
-      PGHOST: storage-db
-      PGUSER: swh
-      POSTGRES_DB: swh-storage
-      FLAVOR: mirror
+      PGCFG_0: swh-storage
+      PGHOST_0: storage-db
+      PGUSER_0: swh
+      POSTGRES_DB_0: swh-storage
+      DB_FLAVOR: mirror
       PORT: "5002"
     env_file:
       - ./env/common-python.env

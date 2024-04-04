@@ -64,20 +64,7 @@ case "$1" in
     "rpc-server")
         shift
         if [ -v POSTGRES_DB ]; then
-            wait_pgsql template1
-
-            echo Database setup
-            if ! check_pgsql_db_created; then
-                echo Creating database and extensions...
-                python3 -m swh db create --dbname ${POSTGRES_DB} $1
-            fi
-            echo Initializing the database ${POSTGRES_DB}...
-            echo " step 1: init-admin"
-            python3 -m swh db init-admin --dbname postgresql:///?service=${NAME} $1
-            echo " step 2: init"
-            python3 -m swh db init --flavor ${FLAVOR:-default} $1
-            echo " step 3: upgrade"
-            python3 -m swh db upgrade --non-interactive $1
+            swh_setup_db $1
         fi
 
         echo "Starting the SWH $1 RPC server"
@@ -95,7 +82,7 @@ case "$1" in
 
     "scheduler")
         shift
-        wait_pgsql template1
+        wait_pgsql
 
         wait-for-it scheduler:5008 -s --timeout=0
 
@@ -122,7 +109,7 @@ case "$1" in
         ;;
 
     "web")
-        wait_pgsql template1
+        wait_pgsql
 
         create_admin_script="
 from django.contrib.auth import get_user_model;
@@ -168,23 +155,10 @@ if not User.objects.filter(username = username).exists():
 	
         wait-for-it storage:5002
         if [ -v POSTGRES_DB ]; then
-            wait_pgsql template1
+            swh_setup_db scrubber
 
-            echo Database setup
-            if ! check_pgsql_db_created; then
-                echo Creating database and extensions...
-                python3 -m swh db create --dbname ${POSTGRES_DB} scrubber
-            fi
-            echo Initializing the database ${POSTGRES_DB}...
-            echo " step 1: init-admin"
-            python3 -m swh db init-admin --dbname postgresql:///?service=${NAME} scrubber
-            echo " step 2: init"
-            python3 -m swh db init scrubber
-            echo " step 3: upgrade"
-            python3 -m swh db upgrade --non-interactive scrubber
-
-	    # now create the scrubber config, if needed
-	    python3 -m swh scrubber check init --object-type ${OBJTYPE} --nb-partitions $(( 2 ** ${NBITS} )) --name ${CFGNAME} && echo "Created scrubber configuration ${CFGNAME}" || echo "Configuration ${CFGNAME} already exists (ignored)."
+            # now create the scrubber config, if needed
+            swh scrubber check init --object-type ${OBJTYPE} --nb-partitions $(( 2 ** ${NBITS} )) --name ${CFGNAME} && echo "Created scrubber configuration ${CFGNAME}" || echo "Configuration ${CFGNAME} already exists (ignored)."
         fi
 
         echo "Starting a SWH storage scrubber ${CFGNAME}"

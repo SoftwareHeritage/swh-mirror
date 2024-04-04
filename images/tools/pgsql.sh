@@ -2,9 +2,37 @@
 
 setup_pgsql () {
   # generate the pgservice file if any
-  if [[ -n $PGCFG_0 ]]; then
+  if [[ -n $POSTGRES_DB ]]; then
+    # simple setup, a single db is declared using a set of PGxxx env vars
     : > ~/.pgpass
-    : > ~/.pg_services.conf
+    : > ~/.pg_service.conf
+    cat >> ~/.pgpass <<EOF
+${PGHOST:-${POSTGRES_DB}-db}:${PGPORT:-5432}:template1:${PGUSER:-postgres}:${PGPASSWORD:-testpassword}
+${PGHOST:-${POSTGRES_DB}-db}:${PGPORT:-5432}:${POSTGRES_DB}:${PGUSER:-postgres}:${PGPASSWORD:-testpassword}
+
+EOF
+
+    cat >> ~/.pg_service.conf <<EOF
+[${POSTGRES_DB}]
+dbname=${POSTGRES_DB}
+host=${PGHOST:-${POSTGRES_DB}-db}
+port=${PGPORT:-5432}
+user=${PGUSER:-postgres}
+
+EOF
+
+  NAME=${POSTGRES_DB}
+  PGHOST=${PGHOST:-${POSTGRES_DB}-db}
+  PGUSER=${PGUSER:-postgres}
+  PGPASSWORD=${PGPASSWORD:-testpassword}
+
+  fi
+  if [[ -n $PGCFG_0 ]]; then
+    # more generic setup allowing to declare several db access
+    # Note that the last one will be considered as the "main" one, i.e.
+    # used for init/upgrade purpose;
+    : > ~/.pgpass
+    : > ~/.pg_service.conf
 
   for i in {0..10}; do
     CFG="PGCFG_$i"
@@ -22,8 +50,11 @@ setup_pgsql () {
       PGUSER=${!PGUSER}
       POSTGRES_DB=POSTGRES_DB_$i
       POSTGRES_DB=${!POSTGRES_DB}
-
-      PGPASSWORD=$(cat /run/secrets/postgres-password-$NAME)
+      PGPASSWORD=PGPASSWORD_$i
+      PGPASSWORD=${!PGPASSWORD}
+      if [[ -z "$PGPASSWORD" ]]; then
+          PGPASSWORD=$(cat /run/secrets/postgres-password-$NAME)
+      fi
 
       cat >> ~/.pgpass <<EOF
 ${PGHOST}:${PGPORT}:template1:${PGUSER}:${PGPASSWORD}
@@ -42,45 +73,53 @@ EOF
 
     fi
   done
+  fi
 
-  chmod 0600 ~/.pgpass
-  echo "DONE setup Postgresql client config file"
-  echo "cat ~/.pg_service.conf"
-  cat ~/.pg_service.conf
-  echo "====================="
-  echo "cat ~/.pgpass"
-  cat ~/.pgpass
-  echo "====================="
-  echo "Main DB is ${NAME} (${POSTGRES_DB})"
-fi
-
+  if [[ -f ~/.pgpass ]] ; then
+    chmod 0600 ~/.pgpass
+    echo "DONE setup Postgresql client config file"
+    echo "cat ~/.pg_service.conf"
+    cat ~/.pg_service.conf
+    echo "====================="
+    echo "cat ~/.pgpass"
+    cat ~/.pgpass | sed -E 's/:[^:]+$/:****/'
+    echo "====================="
+    echo "Main DB is ${NAME} (${POSTGRES_DB})"
+  fi
 }
 
 wait_pgsql () {
-    local db_to_check
+  local db_to_check
     if [ $# -ge 1 ]; then
         db_to_check="$1"
     else
-        db_to_check=$POSTGRES_DB
+        db_to_check=$NAME
     fi
 
-    if [ $# -ge 2 ]; then
-        host_to_check="$2"
-    else
-        host_to_check=$PGHOST
-    fi
-
-    if [ $# -ge 3 ]; then
-        port_to_check="$3"
-    else
-        port_to_check=$PGPORT
-    fi
-
-    echo Waiting for postgresql to start on $host_to_check:${port_to_check} and for database $db_to_check to be available.
-    wait-for-it ${host_to_check}:${port_to_check} -s --timeout=0
-    until psql "dbname=${db_to_check} port=${port_to_check} host=${host_to_check} user=${PGUSER}" -c "select 'postgresql is up!' as connected"; do sleep 1; done
+    echo Waiting for postgresql service ${db_to_check} to be available.
+    until check_pgsql_db_created ${db_to_check}
+  do
+    echo -n "."
+    sleep 1;
+  done
 }
 
 check_pgsql_db_created () {
-    psql "dbname=${POSTGRES_DB} port=${PGPORT} host=${PGHOST} user=${PGUSER}" -c "select 'postgresql is up!' as connected" >/dev/null 2>/dev/null
+  psql service=$1 -c "select 1" >/dev/null 2>&1
+}
+
+swh_setup_db() {
+  wait_pgsql
+
+  echo Database setup
+
+  echo " step 1: Creating extensions..."
+  swh db init-admin --dbname postgresql:///?service=${NAME} $1
+
+  echo " step 2: Initializing the database..."
+  swh db init --flavor ${DB_FLAVOR:-default} $1
+
+  echo " step 3: upgrade"
+  swh db upgrade --non-interactive $1
+
 }
