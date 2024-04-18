@@ -140,7 +140,6 @@ COPY --from=swh-builder /srv /srv
 
 ARG SWH_VER
 ENV SWH_VER=${SWH_VER}
-ENV DJANGO_SETTINGS_MODULE=swh.web.settings.production
 
 COPY conf/logconfig.ini /etc/gunicorn/logconfig.ini
 COPY conf/gunicorn.cfg /etc/gunicorn/swh.cfg
