@@ -88,24 +88,25 @@ case "$1" in
 
         echo "Starting the swh-scheduler $1"
         exec wait-for-it amqp:5672 -s --timeout=0 -- \
-             python3 -m swh --log-level ${LOGLEVEL:-INFO} \
-	     scheduler -C ${SWH_CONFIG_FILENAME} $@
+             swh --log-level ${LOGLEVEL:-INFO} \
+         scheduler -C ${SWH_CONFIG_FILENAME} $@
         ;;
 
     "graph-replayer")
         shift
         wait-for-it storage:5002
         echo "Starting the SWH mirror graph replayer"
-        exec python3 -m swh --log-level ${LOG_LEVEL:-WARNING} \
-		storage replay $@
+        exec swh --log-level ${LOG_LEVEL:-WARNING} \
+             storage replay $@
         ;;
 
     "content-replayer")
         shift
         wait-for-it objstorage:5003
         echo "Starting the SWH mirror content replayer"
-        exec python3 -m swh --log-level ${LOG_LEVEL:-WARNING} \
-		objstorage replay $@
+        exec swh --log-level ${LOG_LEVEL:-WARNING} \
+             objstorage replay $@
+        ;;
         ;;
 
     "web")
@@ -146,13 +147,13 @@ if not User.objects.filter(username = username).exists():
         ;;
     "scrubber")
         shift
-	# expected arguments: entity type, number of partitions (as nbits)
-	OBJTYPE=$1
-	shift
-	NBITS=$1
-	shift
-	CFGNAME="${OBJTYPE}_${NBITS}"
-	
+        # expected arguments: entity type, number of partitions (as nbits)
+        OBJTYPE=$1
+        shift
+        NBITS=$1
+        shift
+        CFGNAME="${OBJTYPE}_${NBITS}"
+
         wait-for-it storage:5002
         if [ -v POSTGRES_DB ]; then
             swh_setup_db scrubber
@@ -162,8 +163,8 @@ if not User.objects.filter(username = username).exists():
         fi
 
         echo "Starting a SWH storage scrubber ${CFGNAME}"
-        exec python3 -m swh --log-level ${LOG_LEVEL:-WARNING} \
-		scrubber check storage ${CFGNAME} $@
+        exec swh --log-level ${LOG_LEVEL:-WARNING} \
+             scrubber check storage ${CFGNAME} $@
         ;;
     *)
         exec $@
