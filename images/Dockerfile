@@ -72,13 +72,15 @@ USER swh
 RUN python3 -m venv /srv/softwareheritage/venv
 ENV PATH="/srv/softwareheritage/venv/bin:${PATH}"
 
-RUN pip install --upgrade pip setuptools wheel
-RUN pip install gunicorn httpie
+RUN --mount=type=cache,mode=0755,uid=1000,gid=1000,target=/srv/softwareheritage/.cache/pip \
+   pip install --upgrade pip setuptools wheel
+RUN --mount=type=cache,mode=0755,uid=1000,gid=1000,target=/srv/softwareheritage/.cache/pip \
+   pip install gunicorn httpie
 
 COPY requirements.txt /srv/softwareheritage/requirements.txt
 
-RUN pip install -r /srv/softwareheritage/requirements.txt && \
-  rm -rf /srv/softwareheritage/.cache/
+RUN --mount=type=cache,mode=0755,uid=1000,gid=1000,target=/srv/softwareheritage/.cache/pip \
+  pip install -r /srv/softwareheritage/requirements.txt
 
 RUN pip freeze > /srv/softwareheritage/pip-freeze.txt
 
