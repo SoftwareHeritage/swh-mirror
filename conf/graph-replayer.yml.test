@@ -43,7 +43,7 @@ journal_client:
     - skipped_content
     - snapshot
   privileged: true
-  stop_on_eof: true
+  on_eof: "stop"
 
 replayer:
   error_reporter:

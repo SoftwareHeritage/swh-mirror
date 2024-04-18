@@ -26,7 +26,7 @@ journal_client:
   message.max.bytes: 1000000000
   privileged: true
   batch_size: 2000
-  stop_on_eof: true
+  on_eof: "stop"
 
 replayer:
   error_reporter:
