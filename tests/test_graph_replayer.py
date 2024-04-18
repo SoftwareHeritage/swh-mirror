@@ -359,7 +359,7 @@ def test_mirror(docker_client, mirror_stack):
         )
 
         LOGGER.info("Scale %s to %d", service.spec.name, SCALE)
-        service.scale(SCALE)
+        service.scale(SCALE, detach=True)
         wait_for_log_entry(
             docker_client,
             service,
