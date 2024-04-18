@@ -86,6 +86,9 @@ case "$1" in
 
         wait-for-it scheduler:5008 -s --timeout=0
 
+        echo "Register task types"
+        swh scheduler task-type register
+
         echo "Starting the swh-scheduler $1"
         exec wait-for-it amqp:5672 -s --timeout=0 -- \
              swh --log-level ${LOGLEVEL:-INFO} \
