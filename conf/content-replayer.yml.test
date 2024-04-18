@@ -1,11 +1,16 @@
 # this config file is a template used for tests, see tests/conftest.py
 
 objstorage:
-  cls: remote
-  url: {objstorage_url}
-  max_retries: 5
-  pool_connections: 100
-  pool_maxsize: 200
+  cls: multiplexer
+  objstorages:
+    - cls: http
+      url: https://softwareheritage.s3.amazonaws.com/content/
+      compression: gzip
+    - cls: remote
+      url: {objstorage_url}
+      max_retries: 5
+      pool_connections: 100
+      pool_maxsize: 200
 
 objstorage_dst:
   cls: remote
