@@ -29,6 +29,8 @@ serve_assets: yes
 production_db:
   name: postgresql:///?service=swh-web
 
+secret_key: something_secret
+
 throttling:
   cache_uri: memcache:11211
   scopes:
