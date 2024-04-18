@@ -28,7 +28,8 @@ journal_client:
   sasl.mechanism: SCRAM-SHA-512
   session.timeout.ms: 600000
   max.poll.interval.ms: 3600000
-  message.max.bytes: 1000000000
+  message.max.bytes: 10485760
+  fetch.max.bytes: 10485760
   privileged: true
   batch_size: 2000
   on_eof: "stop"
