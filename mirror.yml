@@ -3,7 +3,7 @@ version: "3.8"
 services:
   memcache:
     # used by the web app
-    image: memcached
+    image: memcached:1.6
     deploy:
       replicas: 1
     networks:
@@ -11,7 +11,7 @@ services:
 
   storage-db:
     # the main storage database
-    image: postgres:13
+    image: postgres:16
     deploy:
       # we want only one replica of this service in the whole cluster
       replicas: 1
@@ -38,7 +38,7 @@ services:
 
   web-db:
     # the database for the web application
-    image: postgres:13
+    image: postgres:16
     deploy:
       # we want only one replica of this service in the whole cluster
       replicas: 1
@@ -155,7 +155,7 @@ services:
       - storage-db
 
   nginx:
-    image: nginx
+    image: nginx:1.25
     networks:
       - swh-mirror
     configs:
@@ -167,7 +167,7 @@ services:
       mode: global
 
   prometheus:
-    image: prom/prometheus
+    image: prom/prometheus:v2.51.2
     networks:
       - swh-mirror
     depends_on:
@@ -191,14 +191,14 @@ services:
 
   prometheus-pushgateway:
     # used by seaweedfs master to push metrics in prometheus
-    image: prom/pushgateway:v1.4.3
+    image: prom/pushgateway:v1.8.0
     networks:
       - swh-mirror
     ports:
       - 9091:9091
 
   prometheus-statsd-exporter:
-    image: prom/statsd-exporter
+    image: prom/statsd-exporter:v0.26.1
     networks:
       - swh-mirror
     command:
@@ -208,7 +208,7 @@ services:
         target: /etc/prometheus/statsd-mapping.yml
 
   grafana:
-    image: grafana/grafana
+    image: grafana/grafana:10.4.2
     deploy:
       # we want only one replica of this service in the whole cluster
       replicas: 1
@@ -239,7 +239,7 @@ services:
 ## replayer services
 
   redis:
-    image: redis:6.2
+    image: redis:7.2
     deploy:
       # we want only one replica of this service in the whole cluster
       replicas: 1
@@ -305,7 +305,7 @@ services:
 ## secondary services
 
   amqp:
-    image: rabbitmq:3.6-management
+    image: rabbitmq:3.13-management
     networks:
       - swh-mirror
     ports:
@@ -315,7 +315,7 @@ services:
 
   vault-db:
     # the database for the vault rpc server
-    image: postgres:13
+    image: postgres:16
     deploy:
       # we want only one replica of this service in the whole cluster
       replicas: 1
@@ -395,7 +395,7 @@ services:
 
   scheduler-db:
     # the database for the vault rpc server
-    image: postgres:13
+    image: postgres:16
     deploy:
       # we want only one replica of this service in the whole cluster
       replicas: 1
