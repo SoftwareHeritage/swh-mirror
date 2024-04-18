@@ -298,7 +298,7 @@ services:
       - source: content-replayer
         target: /etc/softwareheritage/config.yml
     command:
-      - content-replayer --concurrency=32
+      - content-replayer --concurrency=16
     depends_on:
       - objstorage
       - redis
