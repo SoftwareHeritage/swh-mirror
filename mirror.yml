@@ -237,6 +237,45 @@ services:
     volumes:
       - "grafana:/var/lib/grafana:rw,Z"
 
+## SWH Search services
+
+  elasticsearch:
+    image: elastic/elasticsearch:7.17.20
+    networks:
+      - swh-mirror
+    env_file:
+      - ./env/elasticsearch.env
+    environment:
+      - ingest.geoip.downloader.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+
+  search:
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    networks:
+      - swh-mirror
+    env_file:
+      - ./env/common-python.env
+    environment:
+      PORT: 5010
+    configs:
+      - source: search
+        target: /etc/softwareheritage/config.yml
+    command: ["rpc-server", "search"]
+
+  search-journal-client:
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    networks:
+      - swh-mirror
+    env_file:
+      - ./env/common-python.env
+    configs:
+      - source: search-journal-client
+        target: /etc/softwareheritage/config.yml
+    command: search-indexer
+
+
 ## replayer services
 
   redis:
@@ -506,7 +545,7 @@ volumes:
   web-db:
   prometheus:
   grafana:
-
+  elasticsearch-data:
 
 secrets:
   swh-mirror-storage-db-password:
@@ -533,6 +572,10 @@ configs:
     file: conf/vault-worker.yml
   web:
     file: conf/web.yml
+  search:
+    file: conf/search.yml
+  search-journal-client:
+    file: conf/search-journal-client.yml
   content-replayer:
     file: conf/content-replayer.yml
   graph-replayer:

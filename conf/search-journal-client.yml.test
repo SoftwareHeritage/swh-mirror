@@ -1,0 +1,25 @@
+search:
+  cls: remote
+  url: http://search:5010/
+
+storage:
+  cls: remote
+  url: http://storage:5002/
+
+journal:
+  brokers:
+    - {broker}
+  group_id: {group_id}_search
+  prefix: swh.test.objects
+  sasl.username: {username}
+  sasl.password: {password}
+  security.protocol: sasl_ssl
+  sasl.mechanism: SCRAM-SHA-512
+  session.timeout.ms: 600000
+  max.poll.interval.ms: 3600000
+  message.max.bytes: 1000000000
+  privileged: true
+  on_eof: "stop"
+  object_types:
+    - origin
+    - origin_visit_status

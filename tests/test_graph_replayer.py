@@ -21,6 +21,7 @@ from .conftest import API_URL, KAFKA_GROUPID, KAFKA_PASSWORD, KAFKA_USERNAME, LO
 INITIAL_SERVICES_STATUS = {
     "{}_amqp": "1/1",
     "{}_content-replayer": "0/0",
+    "{}_elasticsearch": "1/1",
     "{}_grafana": "1/1",
     "{}_graph-replayer": "0/0",
     "{}_memcache": "1/1",
@@ -30,6 +31,8 @@ INITIAL_SERVICES_STATUS = {
     "{}_prometheus": "1/1",
     "{}_prometheus-statsd-exporter": "1/1",
     "{}_redis": "1/1",
+    "{}_search": "1/1",
+    "{}_search-journal-client": "1/1",
     "{}_scheduler": "1/1",
     "{}_scheduler-db": "1/1",
     "{}_scheduler-listener": "1/1",

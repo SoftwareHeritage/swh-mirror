@@ -110,6 +110,14 @@ case "$1" in
         exec swh --log-level ${LOG_LEVEL:-WARNING} \
              objstorage replay $@
         ;;
+
+    "search-indexer")
+        shift
+        wait-for-it search:5010
+        echo "Starting the SWH search indexer"
+        exec swh --log-level ${LOG_LEVEL:-WARNING} \
+             search -C ${SWH_CONFIG_FILENAME} \
+             journal-client objects $@
         ;;
 
     "web")

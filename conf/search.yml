@@ -1,0 +1,4 @@
+search:
+  cls: elasticsearch
+  hosts:
+    - elasticsearch:9200

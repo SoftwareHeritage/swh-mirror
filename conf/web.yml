@@ -19,6 +19,10 @@ vault:
   cls: remote
   url: http://vault:5005/
 
+search:
+  cls: remote
+  url: http://search:5010/
+
 allowed_hosts:
   - "*"
 
@@ -59,5 +63,3 @@ throttling:
         default: 120/h
       exempted_networks:
         - 0.0.0.0/0
-
-search: {}
