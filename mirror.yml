@@ -190,13 +190,14 @@ services:
     volumes:
       - "prometheus:/prometheus:rw,Z"
 
-  prometheus-pushgateway:
-    # used by seaweedfs master to push metrics in prometheus
-    image: prom/pushgateway:v1.8.0
-    networks:
-      - swh-mirror
-    ports:
-      - 9091:9091
+  ## uncomment this if you need to be able to push metrics from services not
+  ## running in the swarm cluster, e.g. to allow a seaweedfs master to push metrics
+  # prometheus-pushgateway:
+  #   image: prom/pushgateway:v1.8.0
+  #   networks:
+  #     - swh-mirror
+  #   ports:
+  #     - 9091:9091
 
   prometheus-statsd-exporter:
     image: prom/statsd-exporter:v0.26.1
@@ -348,8 +349,6 @@ services:
     image: rabbitmq:3.13-management
     networks:
       - swh-mirror
-    ports:
-      - 5072:5672
 
 ### vault services
 
