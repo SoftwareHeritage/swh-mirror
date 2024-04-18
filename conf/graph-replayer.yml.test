@@ -3,17 +3,18 @@
 storage:
   cls: pipeline
   steps:
-  - cls: buffer
-  - cls: tenacious
-    error_rate_limit:
-      # fail after 10 errors for 1000 operations
-      errors: 10
-      window_size: 1000
-  - cls: remote
-    url: http://storage:5002/
-    max_retries: 5
-    pool_connections: 100
-    pool_maxsize: 200
+    - cls: filter
+    - cls: buffer
+    - cls: tenacious
+      error_rate_limit:
+        # fail after 10 errors for 1000 operations
+        errors: 10
+        window_size: 1000
+    - cls: remote
+      url: http://storage:5002/
+      max_retries: 5
+      pool_connections: 100
+      pool_maxsize: 200
 
 journal_client:
   cls: kafka
