@@ -90,7 +90,8 @@ def wait_services_status(stack, target_status: Dict[str, int]):
             LOGGER.info("Got them all!")
             break
         if status != last_changed_status:
-            LOGGER.info("Not yet there %s", status)
+            LOGGER.info("Not yet there %s",
+                        dict(set(status.items()) - set(target_status.items())))
             last_changed_status = status
         time.sleep(1)
     return status == target_status
@@ -351,16 +352,6 @@ def test_mirror(docker_client, mirror_stack):
         service = docker_client.service.inspect(
             f"{mirror_stack}_{service_type}-replayer"
         )
-        LOGGER.info("Scale %s to 1", service.spec.name)
-        service.scale(1)
-        wait_services_status(mirror_stack, {service.spec.name: "1/1"})
-        wait_for_log_entry(
-            docker_client,
-            service,
-            f"Starting the SWH mirror {service_type} replayer",
-            1,
-        )
-
         LOGGER.info("Scale %s to %d", service.spec.name, SCALE)
         service.scale(SCALE)
         wait_for_log_entry(
@@ -370,6 +361,10 @@ def test_mirror(docker_client, mirror_stack):
             SCALE,
         )
 
+    for service_type in ("content", "graph"):
+        service = docker_client.service.inspect(
+            f"{mirror_stack}_{service_type}-replayer"
+        )
         # wait for the replaying to be done (stop_on_oef is true)
         LOGGER.info("Wait for %s to be done", service.spec.name)
         wait_for_log_entry(docker_client, service, "Done.", SCALE)
