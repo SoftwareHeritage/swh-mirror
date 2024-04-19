@@ -8,18 +8,18 @@ storage:
 
 journal:
   brokers:
-    - {broker}
-  group_id: {group_id}_search
-  prefix: swh.test.objects
-  sasl.username: {username}
-  sasl.password: {password}
+    - kafka1
+    - kafka2
+    - kafka3
+  group_id: test-user-search-indexer-x-change-me
+  sasl.username: test-user
+  sasl.password: change-me
   security.protocol: sasl_ssl
   sasl.mechanism: SCRAM-SHA-512
   session.timeout.ms: 600000
   max.poll.interval.ms: 3600000
   message.max.bytes: 10485760
   fetch.max.bytes: 10485760
-  on_eof: "stop"
   object_types:
     - origin
     - origin_visit_status
