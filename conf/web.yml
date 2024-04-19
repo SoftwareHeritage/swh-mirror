@@ -63,3 +63,40 @@ throttling:
         default: 120/h
       exempted_networks:
         - 0.0.0.0/0
+
+
+# Extra configuration for a mirror version of swh-web
+
+# top bar can have custom links and donate link
+top_bar:
+  links:
+    Home: https://whatever.sdfa3.org/
+  # donate_link:
+
+# to display the status.io widget in the top bar
+status:
+  {}
+  # server_url: https://status.example.org/
+  # json_path: 1.0/status/<id>
+
+# matomo can optionally be used
+matomo:
+  {}
+  # url:
+  # site_id:
+
+# most of django apps must be disabled when running a mirror
+swh_extra_django_apps:
+  - swh.web.badges
+  - swh.web.jslicenses
+  - swh.web.vault
+
+show_corner_ribbon: false
+
+# mirror partner specific configuration
+mirror_config:
+  partner_name: "TEST"
+  partner_url: https://whatever.sdfa3.org/
+  static_path: /etc/softwareheritage/mirror/static
+  partner_logo_static_path: logo_partner.png
+  templates_path: /etc/softwareheritage/mirror/templates

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   id="logo"
+   viewBox="0 0 332 99.78"
+   version="1.1"
+   sodipodi:docname="logo_partner.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   inkscape:export-filename="logo_partner.png"
+   inkscape:export-xdpi="52.298447"
+   inkscape:export-ydpi="52.298447"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview9"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="1.4299821"
+     inkscape:cx="204.54801"
+     inkscape:cy="73.427493"
+     inkscape:window-width="1257"
+     inkscape:window-height="1027"
+     inkscape:window-x="659"
+     inkscape:window-y="22"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="logo" />
+  <defs
+     id="defs4">
+    <style
+       id="style2">
+      .cls-1 {
+        fill: #195ba2;
+      }
+    </style>
+  </defs>
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:114.239px;line-height:1.25;font-family:'Latin Modern Sans Quotation';-inkscape-font-specification:'Latin Modern Sans Quotation, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#195ba2;fill-opacity:1;stroke-width:1"
+     x="-5.7119098"
+     y="80.537918"
+     id="text346"
+     transform="scale(0.8293716,1.2057321)"><tspan
+       sodipodi:role="line"
+       id="tspan344"
+       x="-5.7119098"
+       y="80.537918"
+       style="fill:#195ba2;fill-opacity:1;stroke-width:1">TEST</tspan></text>
+</svg>

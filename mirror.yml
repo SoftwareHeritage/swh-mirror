@@ -74,6 +74,12 @@ services:
     configs:
       - source: web
         target: /etc/softwareheritage/config.yml
+      - source: web-mirror-logo
+        target: /etc/softwareheritage/mirror/static/logo_partner.png
+      - source: web-mirror-footer
+        target: /etc/softwareheritage/mirror/templates/mirror-footer.html
+      - source: web-mirror-homepage
+        target: /etc/softwareheritage/mirror/templates/mirror-homepage.html
     command: web
     environment:
       PGCFG_0: swh-web
@@ -575,6 +581,12 @@ configs:
     file: conf/vault-worker.yml
   web:
     file: conf/web.yml
+  web-mirror-logo:
+    file: conf/assets/logo_partner.png
+  web-mirror-footer:
+    file: conf/assets/mirror-footer.html
+  web-mirror-homepage:
+    file: conf/assets/mirror-homepage.html
   search:
     file: conf/search.yml
   search-journal-client:
