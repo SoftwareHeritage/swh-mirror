@@ -242,6 +242,10 @@ services:
 
   elasticsearch:
     image: elastic/elasticsearch:7.17.20
+    deploy:
+      placement:
+        constraints:
+          - node.labels.org.softwareheritage.mirror.volumes.elasticsearch == true
     networks:
       - swh-mirror
     env_file:
@@ -362,7 +366,7 @@ services:
       placement:
         max_replicas_per_node: 1
         constraints:
-          - node.labels.org.softwareheritage.mirror.volumes.web-db == true
+          - node.labels.org.softwareheritage.mirror.volumes.vault-db == true
     networks:
       - swh-mirror
     command:
@@ -442,7 +446,7 @@ services:
       placement:
         max_replicas_per_node: 1
         constraints:
-          - node.labels.org.softwareheritage.mirror.volumes.web-db == true
+          - node.labels.org.softwareheritage.mirror.volumes.scheduler-db == true
     networks:
       - swh-mirror
     command:
