@@ -23,7 +23,11 @@ services:
           - node.labels.org.softwareheritage.mirror.volumes.storage-db == true
     networks:
       - swh-mirror
-    command: ['-c', 'shared_buffers=4GB', '-c', 'effective_cache_size=4GB', '-c', 'random_page_cost=1.5', '-c', 'max_wal_size=4GB']
+    command:
+      - '--shared_buffers=4GB'
+      - '--effective_cache_size=4GB'
+      - '--random_page_cost=1.5'
+      - '--max_wal_size=4GB'
     environment:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
       POSTGRES_USER: swh
