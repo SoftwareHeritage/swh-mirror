@@ -101,6 +101,70 @@ services:
         uid: '1000'
         mode: 0400
 
+  sync-mailmap-cron:
+    # cron-like job synchronizing mailmap declarations (web->storage)
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    networks:
+      - swh-mirror
+    # these config files should not be needed for this service, but currently,
+    # if missing, the mailmap script fails to load properly...
+    configs:
+      - source: web
+        target: /etc/softwareheritage/config.yml
+      - source: web-mirror-logo
+        target: /etc/softwareheritage/mirror/static/logo_partner.png
+      - source: web-mirror-footer
+        target: /etc/softwareheritage/mirror/templates/mirror-footer.html
+      - source: web-mirror-homepage
+        target: /etc/softwareheritage/mirror/templates/mirror-homepage.html
+    command:
+      - "django-admin"
+      - "sync_mailmaps"
+      - "--perform"
+      - "service=swh-storage"
+    environment:
+      PGCFG_0: swh-storage
+      PGHOST_0: storage-db
+      PGUSER_0: swh
+      POSTGRES_DB_0: swh-storage
+      PGCFG_1: swh-web
+      PGHOST_1: web-db
+      PGUSER_1: swh
+      POSTGRES_DB_1: swh-web
+      PORT: "5004"
+      DJANGO_SETTINGS_MODULE: swh.web.settings.production
+    secrets:
+      - source: swh-mirror-web-db-password
+        target: postgres-password-swh-web
+        uid: '1000'
+        mode: 0400
+      - source: swh-mirror-storage-db-password
+        target: postgres-password-swh-storage
+        uid: '1000'
+        mode: 0400
+    deploy:
+      mode: replicated
+      replicas: 0
+      labels:
+        - "swarm.cronjob.enable=true"
+        - "swarm.cronjob.schedule=* * * * *"
+        - "swarm.cronjob.skip-running=false"
+      restart_policy:
+        condition: none
+
+  swarm-cronjob:
+    image: crazymax/swarm-cronjob
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    environment:
+      - "TZ=Europe/Paris"
+      - "LOG_LEVEL=info"
+      - "LOG_JSON=false"
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+
   objstorage:
     # the swh-objstorage backend service; this example configuration uses a simple
     # filesystem-based pathslicing implementation of the swh-objstorage: see
