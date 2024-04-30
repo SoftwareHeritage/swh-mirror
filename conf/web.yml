@@ -90,6 +90,8 @@ swh_extra_django_apps:
   - swh.web.badges
   - swh.web.jslicenses
   - swh.web.vault
+  - swh.web.admin
+  - swh.web.mailmap
 
 show_corner_ribbon: false
 
