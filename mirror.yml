@@ -317,6 +317,9 @@ services:
   elasticsearch:
     image: elastic/elasticsearch:7.17.20
     deploy:
+      resources:
+        limits:
+          memory: 2G
       placement:
         constraints:
           - node.labels.org.softwareheritage.mirror.volumes.elasticsearch == true
@@ -326,7 +329,6 @@ services:
       - ./env/elasticsearch.env
     environment:
       - ingest.geoip.downloader.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
 
