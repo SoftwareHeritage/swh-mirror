@@ -156,6 +156,7 @@ if not User.objects.filter(username = username).exists():
                 --statsd-prefix=service.app.web  \
                 'django.core.wsgi:get_wsgi_application()'
         ;;
+
     "scrubber")
         shift
         # expected arguments: entity type, number of partitions (as nbits)
@@ -177,6 +178,7 @@ if not User.objects.filter(username = username).exists():
         exec swh --log-level ${LOG_LEVEL:-WARNING} \
              scrubber check storage ${CFGNAME} $@
         ;;
+
     *)
         exec $@
         ;;

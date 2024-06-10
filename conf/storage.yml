@@ -1,7 +1,10 @@
 storage:
-  cls: postgresql
-  db: postgresql:///?service=swh-storage
-  objstorage:
-    cls: remote
-    url: http://objstorage:5003/
-    name: storage-backend
+  cls: masking
+  db: postgresql:///?service=swh-proxy-storage
+  max_pool_conns: 10
+  storage:
+  - cls: postgresql
+    db: postgresql:///?service=swh-storage
+    objstorage:
+      cls: remote
+      url: http://objstorage:5003/

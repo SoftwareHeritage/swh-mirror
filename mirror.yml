@@ -245,10 +245,14 @@ services:
       - source: storage
         target: /etc/softwareheritage/config.yml
     environment:
-      PGCFG_0: swh-storage
-      PGHOST_0: storage-db
+      PGCFG_0: swh-proxy-storage
+      PGHOST_0: proxy-storage-db
       PGUSER_0: swh
-      POSTGRES_DB_0: swh-storage
+      POSTGRES_DB_0: swh-proxy-storage
+      PGCFG_1: swh-storage
+      PGHOST_1: storage-db
+      PGUSER_1: swh
+      POSTGRES_DB_1: swh-storage
       DB_FLAVOR: mirror
       PORT: "5002"
     env_file:
