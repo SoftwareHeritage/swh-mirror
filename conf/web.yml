@@ -3,10 +3,6 @@ storage:
   url: http://storage:5002/
   timeout: 30
 
-objstorage:
-  cls: remote
-  url: http://objstorage:5003/
-
 #indexer_storage:
 #  cls: remote
 #  url: http://indexer-storage:5007/
