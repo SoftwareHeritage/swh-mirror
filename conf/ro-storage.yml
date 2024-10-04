@@ -1,0 +1,12 @@
+storage:
+  cls: pipeline
+  steps:
+    - cls: masking
+      masking_db: postgresql:///?service=swh-masking-proxy
+      max_pool_conns: 10
+    - cls: postgresql
+      db: postgresql:///?service=swh-storage
+      objstorage:
+        cls: remote
+        url: http://objstorage:5003/
+        name: ro-storage-backend
