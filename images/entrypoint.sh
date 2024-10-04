@@ -63,7 +63,7 @@ case "$1" in
 
     "rpc-server")
         shift
-        if [ -v POSTGRES_DB ]; then
+        if [ -v POSTGRES_DB -a ! -v DB_SKIP_INIT ]; then
             swh_setup_db $1
         fi
 
