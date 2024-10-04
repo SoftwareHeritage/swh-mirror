@@ -315,6 +315,8 @@ services:
 ## SWH Search services
 
   elasticsearch:
+    # this is really just a minimal setup, not realistic for a production-like
+    # environment
     image: elastic/elasticsearch:7.17.20
     deploy:
       resources:
@@ -327,8 +329,6 @@ services:
       - swh-mirror
     env_file:
       - ./env/elasticsearch.env
-    environment:
-      - ingest.geoip.downloader.enabled=false
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
 
@@ -345,7 +345,7 @@ services:
         target: /etc/softwareheritage/config.yml
     command: ["rpc-server", "search"]
 
-  search-journal-client:
+  search-journal-client-origin:
     image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
     networks:
       - swh-mirror
@@ -354,7 +354,18 @@ services:
     configs:
       - source: search-journal-client
         target: /etc/softwareheritage/config.yml
-    command: search-indexer
+    command: ["search-indexer", "-o", "origin"]
+
+  search-journal-client-visit:
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    networks:
+      - swh-mirror
+    env_file:
+      - ./env/common-python.env
+    configs:
+      - source: search-journal-client
+        target: /etc/softwareheritage/config.yml
+    command: ["search-indexer", "-o", "origin_visit_status"]
 
 
 ## replayer services
