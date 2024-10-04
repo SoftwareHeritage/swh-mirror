@@ -4,3 +4,4 @@ storage:
   objstorage:
     cls: remote
     url: http://objstorage:5003/
+    name: storage-backend
