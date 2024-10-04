@@ -3,7 +3,7 @@ vault:
   db: postgresql:///?service=swh-vault
   storage:
     cls: remote
-    url: http://storage:5002/
+    url: http://ro-storage:5002/
   scheduler:
     cls: remote
     url: http://scheduler:5008/
