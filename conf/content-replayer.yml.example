@@ -1,6 +1,7 @@
 objstorage:
   cls: http
   url: https://softwareheritage.s3.amazonaws.com/content/
+  compression: gzip
 
 objstorage_dst:
   cls: remote
