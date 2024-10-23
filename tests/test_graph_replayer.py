@@ -24,6 +24,7 @@ INITIAL_SERVICES_STATUS = {
     "{}_elasticsearch": "1/1",
     "{}_grafana": "1/1",
     "{}_graph-replayer": "0/0",
+    "{}_masking-proxy-db": "1/1",
     "{}_memcache": "1/1",
     "{}_mailhog": "1/1",
     "{}_nginx": "1/1",
@@ -31,12 +32,14 @@ INITIAL_SERVICES_STATUS = {
     "{}_prometheus": "1/1",
     "{}_prometheus-statsd-exporter": "1/1",
     "{}_redis": "1/1",
-    "{}_search": "1/1",
-    "{}_search-journal-client": "1/1",
+    "{}_ro-storage": "1/1",
     "{}_scheduler": "1/1",
     "{}_scheduler-db": "1/1",
     "{}_scheduler-listener": "1/1",
     "{}_scheduler-runner": "1/1",
+    "{}_search": "1/1",
+    "{}_search-journal-client-origin": "1/1",
+    "{}_search-journal-client-visit": "1/1",
     "{}_storage": "1/1",
     "{}_storage-db": "1/1",
     "{}_vault": "1/1",
@@ -239,11 +242,12 @@ def branch_get(url):
 
 
 timing_stats = []
-
+session = requests.Session()
 
 def get(url):
     t0 = time.time()
-    resp = requests.get(url)
+    resp = session.get(url)
+    resp.raise_for_status()
     if resp.headers["content-type"].lower() == "application/json":
         result = resp.json()
     else:
@@ -254,7 +258,7 @@ def get(url):
 
 def post(url):
     t0 = time.time()
-    resp = requests.post(url)
+    resp = session.post(url)
     assert resp.status_code in (200, 201, 202)
     if resp.headers["content-type"].lower() == "application/json":
         result = resp.json()
@@ -429,11 +433,13 @@ def test_mirror(docker_client, mirror_stack):
         assert cook
         assert cook["status"] in ("new", "pending")
         cooks.append((origin["url"], swhid, cook))
+
     # then wait for successful cooks
     while not all(cook["status"] == "done" for _, _, cook in cooks):
         origin, swhid, cook = cooks.pop(0)
         cook = get(f"{API_URL}/vault/flat/{swhid}")
         cooks.append((origin, swhid, cook))
+
     # should all be in "done" status
     for origin, swhid, cook in cooks:
         assert cook["status"] == "done"

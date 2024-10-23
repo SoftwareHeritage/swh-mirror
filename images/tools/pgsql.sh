@@ -111,15 +111,15 @@ check_pgsql_db_created () {
 swh_setup_db() {
   wait_pgsql
 
-  echo Database setup
+  echo "Database setup for $1 (db=postgresql:///?service=${NAME})"
 
   echo " step 1: Creating extensions..."
-  swh db init-admin --dbname postgresql:///?service=${NAME} $1
+  swh db init-admin --all $1
 
   echo " step 2: Initializing the database..."
-  swh db init --flavor ${DB_FLAVOR:-default} $1
+  swh db init --flavor ${DB_FLAVOR:-default} --all $1
 
   echo " step 3: upgrade"
-  swh db upgrade --non-interactive $1
+  swh db upgrade --non-interactive --all $1
 
 }

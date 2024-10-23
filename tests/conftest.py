@@ -7,6 +7,7 @@ import logging
 from os import chdir, environ
 from pathlib import Path
 from shutil import copy, copytree
+from time import sleep
 from uuid import uuid4
 
 import pytest
@@ -92,27 +93,44 @@ def mirror_stack(request, docker_client, tmp_path_factory):
     if not request.config.getoption("keep_stack"):
         LOGGER.info("Remove stack %s", stack_name)
         docker_stack.remove()
-        stack_containers = docker_client.container.list(
-            filters={"label=com.docker.stack.namespace": stack_name}
-        )
 
-        try:
-            LOGGER.info("Waiting for all containers of %s to be down", stack_name)
-            docker_client.container.wait(stack_containers)
-        except DockerException as e:
-            # We have a TOCTOU issue, so skip the error if some containers have already
-            # been stopped by the time we wait for them.
-            if "No such container" not in e.stderr:
-                raise
+        for i in range(5):
+            stack_containers = docker_client.container.list(
+                filters={"label=com.docker.stack.namespace": stack_name}
+            )
+            if not stack_containers:
+                LOGGER.info("No more running containers (loop %s)", i)
+                break
+            try:
+                LOGGER.info(
+                    "Waiting for all %s containers of %s to be down (loop %s)",
+                    len(stack_containers), stack_name, i
+                )
+                docker_client.container.wait(stack_containers)
+            except DockerException as e:
+                LOGGER.error("Docker error: %s", e)
+                # We have a TOCTOU issue, so skip the error if some containers have already
+                # been stopped by the time we wait for them.
+                if "No such container" not in e.stderr:
+                    raise
 
         LOGGER.info("Remove volumes of stack %s", stack_name)
+
         stack_volumes = docker_client.volume.list(
             filters={"label=com.docker.stack.namespace": stack_name}
         )
-        for volume in stack_volumes:
+        retries = 0
+        while stack_volumes:
+            volume = stack_volumes.pop(0)
             try:
                 volume.remove()
+                LOGGER.info("Removed volume %s", volume)
             except DockerException:
                 LOGGER.exception("Failed to remove volume %s", volume)
-
+                stack_volumes.append(volume)
+                retries += 1
+                if retries > 10:
+                    LOGGER.exception("Too many failures, giving up (volume=%s)", volume)
+                    break
+                sleep(1)
     chdir(cwd)

@@ -4,14 +4,16 @@ services:
   memcache:
     # used by the web app
     image: memcached:1.6
-    deploy:
-      replicas: 1
     networks:
       - swh-mirror
+    deploy:
+      replicas: 1
 
   storage-db:
     # the main storage database
     image: postgres:16
+    networks:
+      - swh-mirror
     deploy:
       # we want only one replica of this service in the whole cluster
       replicas: 1
@@ -21,8 +23,6 @@ services:
         max_replicas_per_node: 1
         constraints:
           - node.labels.org.softwareheritage.mirror.volumes.storage-db == true
-    networks:
-      - swh-mirror
     command:
       - '--shared_buffers=4GB'
       - '--effective_cache_size=4GB'
@@ -40,9 +40,42 @@ services:
         uid: '999'
         mode: 0400
 
+  masking-proxy-db:
+    # the database for the masking proxy
+    image: postgres:16
+    networks:
+      - swh-mirror
+    deploy:
+      # we want only one replica of this service in the whole cluster
+      replicas: 1
+      # possible workaround to prevent dropped idle cnx (making pg pool fail to work after a while)
+      endpoint_mode: dnsrr
+      placement:
+        max_replicas_per_node: 1
+        constraints:
+          - node.labels.org.softwareheritage.mirror.volumes.storage-db == true
+    command:
+      - '--shared_buffers=4GB'
+      - '--effective_cache_size=4GB'
+      - '--random_page_cost=1.5'
+      - '--max_wal_size=4GB'
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
+      POSTGRES_USER: swh-masking-proxy
+      POSTGRES_DB: swh-masking-proxy
+    volumes:
+      - "masking-proxy-db:/var/lib/postgresql/data:rw,Z"
+    secrets:
+      - source: swh-mirror-masking-proxy-db-password
+        target: postgres-password
+        uid: '999'
+        mode: 0400
+
   web-db:
     # the database for the web application
     image: postgres:16
+    networks:
+      - swh-mirror
     deploy:
       # we want only one replica of this service in the whole cluster
       replicas: 1
@@ -51,8 +84,6 @@ services:
         max_replicas_per_node: 1
         constraints:
           - node.labels.org.softwareheritage.mirror.volumes.web-db == true
-    networks:
-      - swh-mirror
     command:
       - '--shared_buffers=4GB'
       - '--effective_cache_size=4GB'
@@ -154,6 +185,8 @@ services:
 
   swarm-cronjob:
     image: crazymax/swarm-cronjob
+    networks:
+      - swh-mirror
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
     environment:
@@ -170,6 +203,8 @@ services:
     # filesystem-based pathslicing implementation of the swh-objstorage: see
     # https://docs.softwareheritage.org/devel/apidoc/swh.objstorage.backends.pathslicing.html
     image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    networks:
+      - swh-mirror
     deploy:
       # needed to allow actual and dynamic load balancing
       endpoint_mode: dnsrr
@@ -182,8 +217,6 @@ services:
         # etc.) you want to remove this placement constraint
         constraints:
           - node.labels.org.softwareheritage.mirror.volumes.objstorage == true
-    networks:
-      - swh-mirror
     volumes:
       - "objstorage:/srv/softwareheritage/objects:rw,Z"
     configs:
@@ -198,6 +231,8 @@ services:
   storage:
     # the swh-storage backend service; using postgresql (storage-db) as backend
     image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    networks:
+      - swh-mirror
     deploy:
       # needed to allow actual and dynammic load balancing
       endpoint_mode: dnsrr
@@ -206,8 +241,6 @@ services:
       # an upgrade of the base image that comes with a database migration script
       # is upgraded in a consistent way
       replicas: 1
-    networks:
-      - swh-mirror
     configs:
       - source: storage
         target: /etc/softwareheritage/config.yml
@@ -229,6 +262,45 @@ services:
     depends_on:
       - storage-db
 
+  ro-storage:
+    # the swh-storage backend service; using postgresql (storage-db) as backend
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    networks:
+      - swh-mirror
+    deploy:
+      # needed to allow actual and dynammic load balancing
+      endpoint_mode: dnsrr
+      # a real life replicas value better be in the 16 to 64 range
+      # however we recommend keeping 1 in this stack deploy file so that
+      # an upgrade of the base image that comes with a database migration script
+      # is upgraded in a consistent way
+      replicas: 1
+    configs:
+      - source: ro-storage
+        target: /etc/softwareheritage/config.yml
+    environment:
+      PGCFG_1: swh-masking-proxy
+      PGHOST_1: masking-proxy-db
+      PGUSER_1: swh-masking-proxy
+      POSTGRES_DB_1: swh-masking-proxy
+      PGCFG_0: swh-storage
+      PGHOST_0: storage-db
+      PGUSER_0: swh
+      POSTGRES_DB_0: swh-storage
+      PORT: "5002"
+    env_file:
+      - ./env/common-python.env
+    secrets:
+      - source: swh-mirror-storage-db-password
+        target: postgres-password-swh-storage
+        uid: '1000'
+        mode: 0400
+      - source: swh-mirror-masking-proxy-db-password
+        target: postgres-password-swh-masking-proxy
+        uid: '1000'
+        mode: 0400
+    command: ["rpc-server", "storage"]
+
   nginx:
     image: nginx:1.25
     networks:
@@ -238,8 +310,9 @@ services:
         target: /etc/nginx/nginx.conf
     ports:
       - "5081:5081/tcp"
-    deploy:
-      mode: global
+    # an actual deployment would probably set this:
+    #deploy:
+    #  mode: global
 
   prometheus:
     image: prom/prometheus:v2.51.2
@@ -285,6 +358,8 @@ services:
 
   grafana:
     image: grafana/grafana:10.4.2
+    networks:
+      - swh-mirror
     deploy:
       # we want only one replica of this service in the whole cluster
       replicas: 1
@@ -292,8 +367,6 @@ services:
         max_replicas_per_node: 1
         constraints:
           - node.labels.org.softwareheritage.mirror.monitoring == true
-    networks:
-      - swh-mirror
     depends_on:
     - prometheus
     environment:
@@ -318,6 +391,8 @@ services:
     # this is really just a minimal setup, not realistic for a production-like
     # environment
     image: elastic/elasticsearch:7.17.20
+    networks:
+      - swh-mirror
     deploy:
       resources:
         limits:
@@ -325,8 +400,6 @@ services:
       placement:
         constraints:
           - node.labels.org.softwareheritage.mirror.volumes.elasticsearch == true
-    networks:
-      - swh-mirror
     env_file:
       - ./env/elasticsearch.env
     volumes:
@@ -372,6 +445,8 @@ services:
 
   redis:
     image: redis:7.2
+    networks:
+      - swh-mirror
     deploy:
       # we want only one replica of this service in the whole cluster
       replicas: 1
@@ -379,8 +454,6 @@ services:
         max_replicas_per_node: 1
         constraints:
           - node.labels.org.softwareheritage.mirror.volumes.redis == true
-    networks:
-      - swh-mirror
     command:
       - 'redis-server'
       - '--save 60 1'
@@ -390,6 +463,8 @@ services:
 
   graph-replayer:
     image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    networks:
+      - swh-mirror
     deploy:
       # do not start replayers by default once the remaining of the stack is
       # running as expected, bump this value; expected real-life values should
@@ -398,8 +473,6 @@ services:
       # going above the number of partitions on the kafka cluster (so the 64
       # and 254 upper limits depending on the execution environment).
       replicas: 0
-    networks:
-      - swh-mirror
     env_file:
       - ./env/common-python.env
     environment:
@@ -415,11 +488,11 @@ services:
 
   content-replayer:
     image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    networks:
+      - swh-mirror
     deploy:
       # do not start replayers by default; see above
       replicas: 0
-    networks:
-      - swh-mirror
     env_file:
       - ./env/common-python.env
     environment:
@@ -446,6 +519,8 @@ services:
   vault-db:
     # the database for the vault rpc server
     image: postgres:16
+    networks:
+      - swh-mirror
     deploy:
       # we want only one replica of this service in the whole cluster
       replicas: 1
@@ -454,8 +529,6 @@ services:
         max_replicas_per_node: 1
         constraints:
           - node.labels.org.softwareheritage.mirror.volumes.vault-db == true
-    networks:
-      - swh-mirror
     command:
       - '--shared_buffers=4GB'
       - '--effective_cache_size=4GB'
@@ -475,10 +548,10 @@ services:
 
   vault:
     image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
-    deploy:
-      replicas: 1
     networks:
       - swh-mirror
+    deploy:
+      replicas: 1
     env_file:
       - ./env/common-python.env
     configs:
@@ -500,10 +573,10 @@ services:
 
   vault-worker:
     image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
-    deploy:
-      replicas: 1
     networks:
       - swh-mirror
+    deploy:
+      replicas: 1
     env_file:
       - ./env/common-python.env
       - ./env/celery-worker.env
@@ -526,6 +599,8 @@ services:
   scheduler-db:
     # the database for the vault rpc server
     image: postgres:16
+    networks:
+      - swh-mirror
     deploy:
       # we want only one replica of this service in the whole cluster
       replicas: 1
@@ -534,8 +609,6 @@ services:
         max_replicas_per_node: 1
         constraints:
           - node.labels.org.softwareheritage.mirror.volumes.scheduler-db == true
-    networks:
-      - swh-mirror
     command:
       - '--shared_buffers=4GB'
       - '--effective_cache_size=4GB'
@@ -555,10 +628,10 @@ services:
 
   scheduler:
     image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
-    deploy:
-      replicas: 1
     networks:
       - swh-mirror
+    deploy:
+      replicas: 1
     configs:
       - source: scheduler
         target: /etc/softwareheritage/config.yml
@@ -579,10 +652,10 @@ services:
 
   scheduler-listener:
     image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
-    deploy:
-      replicas: 1
     networks:
       - swh-mirror
+    deploy:
+      replicas: 1
     configs:
       - source: scheduler
         target: /etc/softwareheritage/config.yml
@@ -603,10 +676,10 @@ services:
 
   scheduler-runner:
     image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
-    deploy:
-      replicas: 1
     networks:
       - swh-mirror
+    deploy:
+      replicas: 1
     configs:
       - source: scheduler
         target: /etc/softwareheritage/config.yml
@@ -631,6 +704,7 @@ volumes:
   redis:
   scheduler-db:
   storage-db:
+  masking-proxy-db:
   vault-db:
   web-db:
   prometheus:
@@ -639,6 +713,8 @@ volumes:
 
 secrets:
   swh-mirror-storage-db-password:
+    external: true
+  swh-mirror-masking-proxy-db-password:
     external: true
   swh-mirror-web-db-password:
     external: true
@@ -650,6 +726,8 @@ secrets:
 configs:
   storage:
     file: conf/storage.yml
+  ro-storage:
+    file: conf/ro-storage.yml
   objstorage:
     file: conf/objstorage.yml
   nginx:
