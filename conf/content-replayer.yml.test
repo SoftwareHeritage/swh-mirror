@@ -6,11 +6,21 @@ objstorage:
     - cls: http
       url: https://softwareheritage.s3.amazonaws.com/content/
       compression: gzip
-    - cls: remote
-      url: {objstorage_url}
-      max_retries: 5
-      pool_connections: 100
-      pool_maxsize: 200
+      retry:
+        # 5 retries with 0, 2, 4 and 8s of sleep in between
+        backoff_factor: 1.0
+        total: 5
+        status_forcelist: [413, 429, 503, 404]
+
+    - cls: read-only
+      name: rocquencourt
+      storage:
+        cls: remote
+        url: {objstorage_url}
+        name: rocquencourt-backend
+        max_retries: 5
+        pool_connections: 100
+        pool_maxsize: 200
 
 objstorage_dst:
   cls: remote
