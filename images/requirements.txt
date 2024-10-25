@@ -1,4 +1,4 @@
-swh-core[logging,db,http] @ git+https://gitlab.softwareheritage.org/douardda/swh-core.git@cli-db-init
+swh-core[logging,db,http]
 swh-model[cli]
 swh-counters
 swh-deposit[server]
