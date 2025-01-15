@@ -245,14 +245,10 @@ services:
       - source: storage
         target: /etc/softwareheritage/config.yml
     environment:
-      PGCFG_0: swh-proxy-storage
-      PGHOST_0: proxy-storage-db
+      PGCFG_0: swh-storage
+      PGHOST_0: storage-db
       PGUSER_0: swh
-      POSTGRES_DB_0: swh-proxy-storage
-      PGCFG_1: swh-storage
-      PGHOST_1: storage-db
-      PGUSER_1: swh
-      POSTGRES_DB_1: swh-storage
+      POSTGRES_DB_0: swh-storage
       DB_FLAVOR: mirror
       PORT: "5002"
     env_file:
@@ -266,8 +262,9 @@ services:
     depends_on:
       - storage-db
 
-  ro-storage:
-    # the swh-storage backend service; using postgresql (storage-db) as backend
+  storage-public:
+    # the swh-storage public backend service; comes with a masking proxy before
+    # the actual storage allowing to hide objects after a TDN
     image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
     networks:
       - swh-mirror
@@ -280,25 +277,17 @@ services:
       # is upgraded in a consistent way
       replicas: 1
     configs:
-      - source: ro-storage
+      - source: storage-public
         target: /etc/softwareheritage/config.yml
     environment:
-      PGCFG_1: swh-masking-proxy
-      PGHOST_1: masking-proxy-db
-      PGUSER_1: swh-masking-proxy
-      POSTGRES_DB_1: swh-masking-proxy
-      PGCFG_0: swh-storage
-      PGHOST_0: storage-db
-      PGUSER_0: swh
-      POSTGRES_DB_0: swh-storage
+      PGCFG_0: swh-masking-proxy
+      PGHOST_0: masking-proxy-db
+      PGUSER_0: swh-masking-proxy
+      POSTGRES_DB_0: swh-masking-proxy
       PORT: "5002"
     env_file:
       - ./env/common-python.env
     secrets:
-      - source: swh-mirror-storage-db-password
-        target: postgres-password-swh-storage
-        uid: '1000'
-        mode: 0400
       - source: swh-mirror-masking-proxy-db-password
         target: postgres-password-swh-masking-proxy
         uid: '1000'
@@ -702,6 +691,42 @@ services:
         uid: '1000'
         mode: 0400
 
+  ## TDN propagation services
+  notification-watcher:
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    networks:
+      - swh-mirror
+    deploy:
+      replicas: 0  # do not start this at first, required for tests
+    configs:
+      - source: alter
+        target: /etc/softwareheritage/config.yml
+    env_file:
+      - ./env/common-python.env
+    environment:
+      SWH_LOG_LEVELS: debug
+      PGCFG_0: swh-storage
+      PGHOST_0: storage-db
+      PGUSER_0: swh
+      POSTGRES_DB_0: swh-storage
+      PGCFG_1: swh-masking-proxy
+      PGHOST_1: masking-proxy-db
+      PGUSER_1: swh
+      POSTGRES_DB_1: swh-masking-proxy
+    command: run-mirror-notification-watcher
+    secrets:
+      - source: swh-mirror-storage-db-password
+        target: postgres-password-swh-storage
+        uid: '1000'
+        mode: 0400
+      - source: swh-mirror-masking-proxy-db-password
+        target: postgres-password-swh-masking-proxy
+        uid: '1000'
+        mode: 0400
+
+    #volumes:
+    #  - "./conf/mirror/age-identities.txt:/srv/softwareheritage/age-identities.txt:ro"
+
 
 volumes:
   objstorage:
@@ -728,10 +753,12 @@ secrets:
     external: true
 
 configs:
+  alter:
+    file: conf/alter.yml
   storage:
     file: conf/storage.yml
-  ro-storage:
-    file: conf/ro-storage.yml
+  storage-public:
+    file: conf/storage-public.yml
   objstorage:
     file: conf/objstorage.yml
   nginx:

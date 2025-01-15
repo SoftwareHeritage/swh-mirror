@@ -1,3 +1,7 @@
+# build rage (for swh-alter)
+FROM rust:slim-bookworm AS build_rage
+RUN cargo install rage
+
 ARG pythonversion=3.11
 FROM python:${pythonversion:-3.11} AS swh-builder
 LABEL maintainer="Software Heritage <sysop@softwareheritage.org>"
@@ -139,6 +143,8 @@ RUN useradd -md /srv/softwareheritage -s /bin/bash swh
 RUN chown swh:swh /srv/softwareheritage /var/lib/swh  /var/run/gunicorn/swh /etc/softwareheritage
 USER swh
 COPY --from=swh-builder /srv /srv
+# Install rage (for swh-alter)
+COPY --from=build_rage /usr/local/cargo/bin/rage /usr/local/cargo/bin/rage-keygen /usr/local/bin
 
 ARG SWH_VER
 ENV SWH_VER=${SWH_VER}

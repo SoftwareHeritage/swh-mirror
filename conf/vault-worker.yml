@@ -1,6 +1,6 @@
 storage:
   cls: remote
-  url: http://ro-storage:5002/
+  url: http://storage-public:5002/
 
 vault:
   cls: remote

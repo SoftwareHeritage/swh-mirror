@@ -1,0 +1,7 @@
+storage:
+  cls: masking
+  db: postgresql:///?service=swh-masking-proxy
+  max_pool_conns: 10
+  storage:
+    cls: remote
+    url: http://storage:5002

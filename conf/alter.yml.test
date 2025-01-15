@@ -1,0 +1,60 @@
+storage:
+  cls: remote
+  url: http://storage:5002/
+  timeout: 15
+
+restoration_storage:
+  cls: remote
+  url: http://storage:5002/
+  timeout: 15
+
+removal_storages:
+  postgresql:
+    cls: postgresql
+    db: postgresql:///?service=swh-storage
+
+removal_objstorages:
+  primary:
+    cls: remote
+    url: http://objstorage:5003/
+
+recovery_bundles:
+  secret_sharing:
+    minimum_required_groups: 2
+    groups:
+      legal:
+        minimum_required_shares: 1
+        recipient_keys:
+          Lucio: age1m9g4jflzjdcztu63jv9v4djdu6gpz7y3ga528ngdml54t8kn8dvsqhzyt6
+      sysadmins:
+        minimum_required_shares: 1
+        recipient_keys:
+          Sofia: age1kdf2kzmw4wjr7anp55xuzknyphax6plr90rdpp8s35p69l5rxujsekpwxy
+
+# Specific to the mirror notification watcher
+# ===========================================
+
+journal_client:
+  cls: kafka
+  brokers:
+    - {broker}
+  prefix: swh.test.mirror-notifications
+  group_id: {group_id}_tdn-wathcer
+  sasl.username: {username}
+  sasl.password: {password}
+  security.protocol: sasl_ssl
+  sasl.mechanism: SCRAM-SHA-512
+
+masking_admin:
+  cls: postgresql
+  db: postgresql:///?service=swh-masking-proxy
+
+emails:
+  from: swh-mirror@example.org
+  recipients:
+  - lucio@example.org
+  - sofia@example.org
+
+smtp:
+  host: smtp
+  port: 1025

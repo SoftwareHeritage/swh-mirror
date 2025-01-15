@@ -120,6 +120,11 @@ case "$1" in
              journal-client objects $@
         ;;
 
+    "run-mirror-notification-watcher")
+      shift
+      exec swh alter run-mirror-notification-watcher "$@"
+      ;;
+
     "web")
         wait_pgsql
 

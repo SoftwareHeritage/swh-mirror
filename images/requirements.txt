@@ -1,3 +1,4 @@
+swh-alter
 swh-core[logging,db,http]
 swh-model[cli]
 swh-counters
