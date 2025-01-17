@@ -76,10 +76,9 @@ Note that for this test run:
   - `SWH_IMAGE_TAG`: the docker image tag to be tested.
   You can copy the template `env/tests.env.template` to `env/tests.env` to set them.
 
-- the `softwareheritage/base`, `softwareheritage/web`,
-  `softwareheritage/replayer` and `softwareheritage/test` images must be built
-  with the proper image tag (`$SWH_IMAGE_TAG`). See the
-  `../images/build_images.sh` script to rebuild images if need be.
+- the `softwareheritage/mirror` image must be built with the proper image tag
+  (`$SWH_IMAGE_TAG`). See the `../images/build_images.sh` script to rebuild
+  images if need be.
 
 
 Assuming you have a properly set up environment:
@@ -91,13 +90,11 @@ ID                            HOSTNAME   STATUS    AVAILABILITY   MANAGER STATUS
 w6uzfpxayyc8l9ksfud7dlq9p *   libra      Ready     Active         Leader           20.10.5+dfsg1
 # check images
 ~/swh-mirror$ echo $SWH_IMAGE_TAG
-20220805-185133
-~/swh-mirror$ docker image ls -f reference="softwareheritage/*:$SWH_IMAGE_TAG"
+20250115-153031
+~/swh-mirror$ docker image ls -f reference="softwareheritage/mirror:*"
 REPOSITORY                  TAG               IMAGE ID       CREATED      SIZE
-softwareheritage/replayer   20220805-185133   da2d12d57a65   5 days ago   223MB
-softwareheritage/test       20220805-185133   cb4449867d3a   5 days ago   682MB
-softwareheritage/web        20220805-185133   66c54d5c2611   5 days ago   364MB
-softwareheritage/base       20220805-185133   528010e1fc9c   5 days ago   682MB
+softwareheritage/mirror   20250115-153031   0ba89baeea43   47 hours ago   678MB
+softwareheritage/mirror   latest            0ba89baeea43   47 hours ago   678MB
 # check environment variables are set
 ~/swh-mirror$ env | grep SWH_MIRROR_TEST
 SWH_MIRROR_TEST_KAFKA_PASSWORD=<xxx>
