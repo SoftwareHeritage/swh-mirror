@@ -56,5 +56,5 @@ emails:
   - sofia@example.org
 
 smtp:
-  host: smtp
+  host: mailhog
   port: 1025

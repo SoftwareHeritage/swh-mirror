@@ -16,7 +16,9 @@ import msgpack
 from python_on_whales import DockerException
 import requests
 
-from .conftest import API_URL, KAFKA_GROUPID, KAFKA_PASSWORD, KAFKA_USERNAME, LOGGER
+import pytest
+
+from .conftest import API_URL, BASE_URL, KAFKA_BROKER, KAFKA_GROUPID, KAFKA_PASSWORD, KAFKA_USERNAME, LOGGER
 
 INITIAL_SERVICES_STATUS = {
     "{}_amqp": "1/1",
@@ -101,20 +103,24 @@ def wait_services_status(stack, target_status: Dict[str, int]):
     return status == target_status
 
 
-def wait_for_log_entry(docker_client, service, log_entry, occurrences=1):
+def wait_for_log_entry(docker_client, service, log_entry, occurrences=1, with_stderr=False):
     count = 0
     for stream_type, stream_content in docker_client.service.logs(
         service, follow=True, stream=True
     ):
         LOGGER.debug("%s output: %s", service.spec.name, stream_content)
-        if stream_type != "stdout":
+        if not with_stderr and stream_type != "stdout":
             continue
-        count += len(
+        ncount = len(
             re.findall(
-                re.escape(log_entry.encode("us-ascii", errors="replace")),
-                stream_content,
+                log_entry,
+                stream_content.decode(errors="replace"),
             )
         )
+        if not ncount:
+            if log_entry in stream_content.decode(errors="replace"):
+                ncount = 1
+        count += ncount
         if count >= occurrences:
             break
 
@@ -249,7 +255,7 @@ def get(url):
     t0 = time.time()
     resp = session.get(url)
     resp.raise_for_status()
-    if resp.headers["content-type"].lower() == "application/json":
+    if resp.headers["content-type"].lower() in ("application/json", "text/json"):
         result = resp.json()
     else:
         result = resp.content
@@ -290,7 +296,7 @@ def get_stats(origin):
 def get_expected_stats():
 
     cfg = {
-        "bootstrap.servers": "broker1.journal.staging.swh.network:9093",
+        "bootstrap.servers": KAFKA_BROKER,
         "sasl.username": KAFKA_USERNAME,
         "sasl.password": KAFKA_PASSWORD,
         "group.id": KAFKA_GROUPID,
@@ -352,6 +358,7 @@ def test_mirror(docker_client, mirror_stack):
     }
     wait_services_status(mirror_stack, initial_services_status)
 
+    ########################
     # run replayer services
     for service_type in ("content", "graph"):
         service = docker_client.service.inspect(
@@ -381,9 +388,10 @@ def test_mirror(docker_client, mirror_stack):
         # TODO: check there are no error reported in redis after the replayers are done
 
     origins = get(f"{API_URL}/origins/")
+    expected_stats = get_expected_stats()
+    # TODO: make this executed for "slow" profile only
     if False:
         # check replicated archive is in good shape
-        expected_stats = get_expected_stats()
         LOGGER.info("Check replicated archive")
         # seems the graph replayer is OK, let's check the archive can tell something
         expected_origins = sorted(expected_stats)
@@ -399,6 +407,7 @@ def test_mirror(docker_client, mirror_stack):
             assert origin_stats == expected
             LOGGER.info("%s is OK", origin)
 
+    ########################
     # test the vault service
     cooks = []
     # first start all the cookings
@@ -470,6 +479,55 @@ def test_mirror(docker_client, mirror_stack):
                         sha1(tarfileobj.extractfile(tarinfo).read()).hexdigest()
                         == expected["checksums"]["sha1"]
                     )
-            else:
-                breakpoint()
-                pass
+
+    ########################
+    # test the TDN handling
+    service = docker_client.service.inspect(
+        f"{mirror_stack}_notification-watcher"
+    )
+    LOGGER.info("Scale %s to %d", service.spec.name, 1)
+    service.scale(1)
+
+    LOGGER.info("Scaled %s to %d", service.spec.name, 1)
+    subject = "[Action needed] Removal from the main Software Heritage archive (TEST_REMOVAL_1)"
+    # beware these are not "basic" quotes...
+    logentries = [
+        "Watching notifications for mirrors",
+        "Received a removal notification “TEST_REMOVAL_1”",
+        f"Sending email “{subject}”",
+    ]
+    for logentry in logentries:
+        LOGGER.info("Waiting for log entry %s", logentry)
+        wait_for_log_entry(docker_client, service, logentry, with_stderr=True)
+
+    # check the notification email has been sent
+    LOGGER.info("Checking expected email message has been sent")
+    for i in range(5):
+        messages = get(f"{BASE_URL}/mail/api/v2/messages")
+        if messages["count"] >= 1:
+            break
+        time.sleep(1)
+
+    assert messages["count"] >= 1
+    for msg in messages["items"]:
+        if msg["Content"]["Headers"]["Subject"][0] == subject:
+            break
+    else:
+        assert False, "Expected email message missing"
+
+    # check the objects under the origin are masked
+    origin = "https://github.com/SoftwareHeritage/swh-core"
+    LOGGER.info(f"Checking swh-core github origin has been masked ({origin})")
+    with pytest.raises(requests.HTTPError) as exc:
+        next(origin_get(origin))
+    assert exc.value.response.status_code == 403
+
+    # check that the swh.core pypi package remains OK
+    origin = "https://pypi.org/project/swh.core/"
+    LOGGER.info(f"Checking swh-core pypi origin is still available ({origin})")
+    origin_stats, _ = get_stats(origin)
+    assert origin_stats == expected_stats[origin]
+
+    # TODO: respawn a pair of vault cooking to check both origins are handled
+    # properly, aka the masked one should not be cookable while the pypi
+    # package shoud work the same as before...

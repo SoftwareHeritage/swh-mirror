@@ -61,7 +61,7 @@ services:
       - '--max_wal_size=4GB'
     environment:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
-      POSTGRES_USER: swh-masking-proxy
+      POSTGRES_USER: swh
       POSTGRES_DB: swh-masking-proxy
     volumes:
       - "masking-proxy-db:/var/lib/postgresql/data:rw,Z"
@@ -282,7 +282,7 @@ services:
     environment:
       PGCFG_0: swh-masking-proxy
       PGHOST_0: masking-proxy-db
-      PGUSER_0: swh-masking-proxy
+      PGUSER_0: swh
       POSTGRES_DB_0: swh-masking-proxy
       PORT: "5002"
     env_file:
