@@ -18,6 +18,8 @@ import requests
 
 import pytest
 
+from swh.storage import get_storage
+
 from .conftest import API_URL, BASE_URL, KAFKA_BROKER, KAFKA_GROUPID, KAFKA_PASSWORD, KAFKA_USERNAME, LOGGER
 
 INITIAL_SERVICES_STATUS = {
@@ -198,6 +200,69 @@ def origin_get(url, done=None):
         snapshot_url = visit["snapshot_url"]
         if snapshot_url:
             yield from snapshot_get(snapshot_url, done)
+
+
+def get_stats_from_storage(url):
+
+    import swh.storage.algos.dir_iterators as DI
+    import swh.storage.algos.revisions_walker as RW
+    import swh.storage.algos.origin as O
+    import swh.storage.algos.snapshot as SN
+    from swh.model.model import  SnapshotTargetType
+
+    storage = get_storage(cls="remote", url=f"{BASE_URL}/storage-public")
+
+    stats = {"origin": url}
+
+    visits = list(O.iter_origin_visits(storage, url))
+    stats["visits"] = len(visits)
+
+    snp_ids = {
+        vs.snapshot
+        for v in visits
+        for vs in O.iter_origin_visit_statuses(storage, url, v.visit)
+        if vs.snapshot
+    }
+
+    snapshots = [SN.snapshot_get_all_branches(storage, snp_id) for snp_id in snp_ids]
+
+    branches = []
+    for snp in snapshots:
+        for brname, br in snp.branches.items():
+            branches.append(br)
+    stats["release"] = len({br for br in branches if br.target_type == SnapshotTargetType.RELEASE})
+    stats["alias"] = len({br for br in branches if br.target_type == SnapshotTargetType.ALIAS})
+    stats["branch"] = len({br for br in branches if br.target_type == SnapshotTargetType.REVISION})
+
+    # resolve aliases
+    rev_ids = {br.target for br in branches if br.target_type == SnapshotTargetType.REVISION}
+    rel_ids = {br.target for br in branches if br.target_type == SnapshotTargetType.RELEASE}
+    dir_ids = {br.target for br in branches if br.target_type == SnapshotTargetType.DIRECTORY}
+    snp_ids.update({br.target for br in branches if br.target_type == SnapshotTargetType.SNAPSHOT})
+
+    state = RW.State()
+
+    all_revs = set()
+    for rev_id in rev_ids:
+        all_revs.add(rev_id)
+        for rev_d in RW.BFSRevisionsWalker(storage, rev_id, state=state):
+            all_revs.add(rev_d["id"])
+            dir_ids.add(rev_d["directory"])
+
+    all_cnts = set()
+    all_dirs = set()
+    for dir_id in dir_ids:
+        all_dirs.add(dir_id)
+        for direntry in DI.dir_iterator(storage, dir_id):
+            if direntry["type"] == "dir":
+                all_dirs.add(direntry["target"])
+            elif direntry["type"] == "file":
+                all_cnts.add(direntry["target"])
+    stats["cnt"] = len(all_cnts)
+    stats["dir"] = len(all_dirs)
+    stats["rev"] = len(all_revs)
+    return stats
+
 
 
 def resolve_target(target_type, target, target_url, done):
@@ -401,7 +466,7 @@ def test_mirror(request, docker_client, mirror_stack):
         for origin, expected in expected_stats.items():
             timing_stats.clear()
             assert origin == expected["origin"]
-            origin_stats, swhids = get_stats(origin)
+            origin_stats = get_stats_from_storage(origin)
             LOGGER.info("%s", origin_stats)
             LOGGER.info("%d REQS took %ss", len(timing_stats), sum(timing_stats))
             assert origin_stats == expected
@@ -525,7 +590,7 @@ def test_mirror(request, docker_client, mirror_stack):
     # check that the swh.core pypi package remains OK
     origin = "https://pypi.org/project/swh.core/"
     LOGGER.info(f"Checking swh-core pypi origin is still available ({origin})")
-    origin_stats, _ = get_stats(origin)
+    origin_stats = get_stats_from_storage(origin)
     assert origin_stats == expected_stats[origin]
 
     # TODO: respawn a pair of vault cooking to check both origins are handled
