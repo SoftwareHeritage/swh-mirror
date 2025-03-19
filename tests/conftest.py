@@ -31,6 +31,9 @@ def pytest_addoption(parser, pluginmanager):
     parser.addoption(
         "--keep-stack", action="store_true", help="Do not teardown the docker stack"
     )
+    parser.addoption(
+        "--full-check", action="store_true", help="Perform an exhaustive check that all objects have been replicated properly (slow)."
+    )
 
 
 @pytest.fixture(scope="session")

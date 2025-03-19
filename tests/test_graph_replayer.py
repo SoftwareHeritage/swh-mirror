@@ -352,7 +352,7 @@ def get_expected_stats():
     return stats
 
 
-def test_mirror(docker_client, mirror_stack):
+def test_mirror(request, docker_client, mirror_stack):
     initial_services_status = {
         k.format(mirror_stack.name): v for k, v in INITIAL_SERVICES_STATUS.items()
     }
@@ -389,8 +389,8 @@ def test_mirror(docker_client, mirror_stack):
 
     origins = get(f"{API_URL}/origins/")
     expected_stats = get_expected_stats()
-    # TODO: make this executed for "slow" profile only
-    if False:
+    # only check the complete replication when asked for (this is slow)
+    if request.config.getoption("full_check"):
         # check replicated archive is in good shape
         LOGGER.info("Check replicated archive")
         # seems the graph replayer is OK, let's check the archive can tell something
