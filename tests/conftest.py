@@ -130,11 +130,11 @@ def mirror_stack(request, docker_client, tmp_path_factory):
                 volume.remove()
                 LOGGER.info("Removed volume %s", volume)
             except DockerException:
-                LOGGER.exception("Failed to remove volume %s", volume)
-                stack_volumes.append(volume)
-                retries += 1
                 if retries > 10:
                     LOGGER.exception("Too many failures, giving up (volume=%s)", volume)
                     break
+                LOGGER.warning("Failed to remove volume %s; retrying...", volume)
+                stack_volumes.append(volume)
+                retries += 1
                 sleep(1)
     chdir(cwd)
