@@ -54,6 +54,33 @@ INITIAL_SERVICES_STATUS = {
     "{}_web-db": "1/1",
 }
 SCALE = 2
+session = requests.Session()
+adapter = requests.adapters.HTTPAdapter(
+    max_retries=3,
+    pool_connections=5,
+    pool_maxsize=10,
+)
+session.mount(BASE_URL, adapter)
+
+
+def get(url):
+    resp = session.get(url)
+    resp.raise_for_status()
+    if resp.headers["content-type"].lower() in ("application/json", "text/json"):
+        result = resp.json()
+    else:
+        result = resp.content
+    return result
+
+
+def post(url):
+    resp = session.post(url)
+    assert resp.status_code in (200, 201, 202)
+    if resp.headers["content-type"].lower() == "application/json":
+        result = resp.json()
+    else:
+        result = resp.content
+    return result
 
 
 def service_target_replicas(service):
@@ -127,95 +154,26 @@ def wait_for_log_entry(docker_client, service, log_entry, occurrences=1, with_st
             break
 
 
-def content_get(url, done):
-    content = get(url)
-    swhid = f"swh:1:cnt:{content['checksums']['sha1_git']}"
-    # checking the actual blob is present and valid
-    # XXX: a bit sad...
-    try:
-        data = get(content["data_url"])
-    except Exception as exc:
-        LOGGER.error("Failed loading %s", content["data_url"], exc_info=exc)
-        raise
-    assert len(data) == content["length"]
-    assert sha1(data).hexdigest() == content["checksums"]["sha1"]
-
-    if swhid not in done:
-        done.add(swhid)
-        yield content
-
-
-def directory_get(url, done):
-    directory = get(url)
-    id = url.split("/")[-2]
-    swhid = f"swh:1:dir:{id}"
-    if swhid not in done:
-        done.add(swhid)
-        for entry in directory:
-            if entry["type"] == "file":
-                swhid = f"swh:1:cnt:{entry['target']}"
-                if swhid not in done:
-                    yield from content_get(entry["target_url"], done)
-            elif entry["type"] == "dir":
-                swhid = f"swh:1:dir:{entry['target']}"
-                if swhid not in done:
-                    yield from directory_get(entry["target_url"], done)
-
-
-def revision_get(url, done):
-    revision = get(url)
-    swhid = f"swh:1:rev:{revision['id']}"
-    if swhid not in done:
-        done.add(swhid)
-        yield revision
-        swhid = f"swh:1:dir:{revision['directory']}"
-        if swhid not in done:
-            yield from directory_get(revision["directory_url"], done)
-        for parent in revision["parents"]:
-            if f"swh:1:rev:{parent['id']}" not in done:
-                yield from revision_get(parent["url"], done)
-
-
-def snapshot_get(url, done):
-    snapshot = get(url)
-    for branchname, branch in snapshot["branches"].items():
-        if branch:
-            yield from resolve_target(
-                branch["target_type"],
-                branch["target"],
-                branch["target_url"],
-                done,
-            )
-
-
-def origin_get(url, done=None):
-    if done is None:
-        done = set()
-    visit = get(f"{API_URL}/origin/{url}/visit/latest/?require_snapshot=true")
-    if not visit.get("snapshot"):
-        return
-    swhid = f"swh:1:snp:{visit['snapshot']}"
-    if swhid not in done:
-        done.add(swhid)
-        snapshot_url = visit["snapshot_url"]
-        if snapshot_url:
-            yield from snapshot_get(snapshot_url, done)
-
-
 def get_stats_from_storage(url):
 
     import swh.storage.algos.dir_iterators as DI
     import swh.storage.algos.revisions_walker as RW
     import swh.storage.algos.origin as O
     import swh.storage.algos.snapshot as SN
-    from swh.model.model import  SnapshotTargetType
+    from swh.model.model import  SnapshotTargetType, ReleaseTargetType
 
-    storage = get_storage(cls="remote", url=f"{BASE_URL}/storage-public")
+    storage = get_storage(
+        cls="remote",
+        url=f"{BASE_URL}/storage-public",
+        max_retries=5,
+        pool_connections=10,
+        pool_maxsize=20,
+    )
 
     stats = {"origin": url}
 
     visits = list(O.iter_origin_visits(storage, url))
-    stats["visits"] = len(visits)
+    stats["visit"] = len(visits)
 
     snp_ids = {
         vs.snapshot
@@ -225,11 +183,8 @@ def get_stats_from_storage(url):
     }
 
     snapshots = [SN.snapshot_get_all_branches(storage, snp_id) for snp_id in snp_ids]
+    branches = [br for snp in snapshots for br in snp.branches.values() if br]
 
-    branches = []
-    for snp in snapshots:
-        for brname, br in snp.branches.items():
-            branches.append(br)
     stats["release"] = len({br for br in branches if br.target_type == SnapshotTargetType.RELEASE})
     stats["alias"] = len({br for br in branches if br.target_type == SnapshotTargetType.ALIAS})
     stats["branch"] = len({br for br in branches if br.target_type == SnapshotTargetType.REVISION})
@@ -243,14 +198,28 @@ def get_stats_from_storage(url):
     state = RW.State()
 
     all_revs = set()
+    all_cnts = set()
+    all_dirs = set()
+
+    all_rels = storage.release_get(list(rel_ids))
+    for rel in all_rels:
+        if rel.target_type == ReleaseTargetType.REVISION:
+            rev_ids.add(rel.target)
+        elif rel.target_type == ReleaseTargetType.DIRECTORY:
+            dir_ids.add(rel.target)
+        elif rel.target_type == ReleaseTargetType.CONTENT:
+            all_cnts.add(rel.target)
+        elif rel.target_type == ReleaseTargetType.RELEASE:
+            raise ValueError("rel: Not yet supported")
+        elif rel.target_type == ReleaseTargetType.SNAPSHOT:
+            raise ValueError("snp: Not yet supported")
+
     for rev_id in rev_ids:
         all_revs.add(rev_id)
         for rev_d in RW.BFSRevisionsWalker(storage, rev_id, state=state):
             all_revs.add(rev_d["id"])
             dir_ids.add(rev_d["directory"])
 
-    all_cnts = set()
-    all_dirs = set()
     for dir_id in dir_ids:
         all_dirs.add(dir_id)
         for direntry in DI.dir_iterator(storage, dir_id):
@@ -262,100 +231,6 @@ def get_stats_from_storage(url):
     stats["dir"] = len(all_dirs)
     stats["rev"] = len(all_revs)
     return stats
-
-
-
-def resolve_target(target_type, target, target_url, done):
-    if target_type == "revision":
-        if f"swh:1:rev:{target}" not in done:
-            yield from revision_get(target_url, done)
-    elif target_type == "release":
-        if f"swh:1:rel:{target}" not in done:
-            yield from release_get(target_url, done)
-    elif target_type == "directory":
-        if f"swh:1:dir:{target}" not in done:
-            yield from directory_get(target_url, done)
-    elif target_type == "content":
-        if f"swh:1:cnt:{target}" not in done:
-            yield from content_get(target_url, done)
-    elif target_type == "snapshot":
-        if f"swh:1:snp:{target}" not in done:
-            yield from snapshot_get(target_url, done)
-    # elif target_type == "alias":
-    #     if f"swh:1:snp:{target}" not in done:
-    #         yield from snapshot_get(target_url, done)
-
-
-def release_get(url, done):
-    release = get(url)
-    swhid = f"swh:1:rel:{release['id']}"
-    if swhid not in done:
-        done.add(swhid)
-        yield release
-        yield from resolve_target(
-            release["target_type"], release["target"], release["target_url"], done
-        )
-
-
-def branch_get(url):
-    branches = set()
-    visits = get(f"{API_URL}/origin/{url}/visits/")
-    for visit in visits:
-        snapshot_url = visit.get("snapshot_url")
-        while snapshot_url:
-            snapshot = get(snapshot_url)
-            for name, tgt in snapshot["branches"].items():
-                if tgt is not None:
-                    branches.add(
-                        (name, tgt["target_type"], tgt["target"], tgt["target_url"])
-                    )
-            snapshot_url = snapshot["next_branch"]
-    return len(visits), branches
-
-
-timing_stats = []
-session = requests.Session()
-
-def get(url):
-    t0 = time.time()
-    resp = session.get(url)
-    resp.raise_for_status()
-    if resp.headers["content-type"].lower() in ("application/json", "text/json"):
-        result = resp.json()
-    else:
-        result = resp.content
-    timing_stats.append(time.time() - t0)
-    return result
-
-
-def post(url):
-    t0 = time.time()
-    resp = session.post(url)
-    assert resp.status_code in (200, 201, 202)
-    if resp.headers["content-type"].lower() == "application/json":
-        result = resp.json()
-    else:
-        result = resp.content
-    timing_stats.append(time.time() - t0)
-    return result
-
-
-def get_stats(origin):
-    result = {"origin": origin}
-
-    swhids = set()
-    list(origin_get(origin, done=swhids))
-    result["cnt"] = len([swhid for swhid in swhids if swhid.startswith("swh:1:cnt:")])
-    result["dir"] = len([swhid for swhid in swhids if swhid.startswith("swh:1:dir:")])
-    result["rev"] = len([swhid for swhid in swhids if swhid.startswith("swh:1:rev:")])
-
-    visits, branches = branch_get(origin)
-    result["visit"] = visits
-    result["release"] = len([br for br in branches if br[1] == "release"])
-    result["alias"] = len([br for br in branches if br[1] == "alias"])
-    result["branch"] = len([br for br in branches if br[1] == "revision"])
-
-    return result, swhids
 
 
 def get_expected_stats():
@@ -464,11 +339,11 @@ def test_mirror(request, docker_client, mirror_stack):
         assert sorted(o["url"] for o in origins) == expected_origins
 
         for origin, expected in expected_stats.items():
-            timing_stats.clear()
             assert origin == expected["origin"]
+            t0 = time.monotonic()
             origin_stats = get_stats_from_storage(origin)
             LOGGER.info("%s", origin_stats)
-            LOGGER.info("%d REQS took %ss", len(timing_stats), sum(timing_stats))
+            LOGGER.info("took %.2fs", time.monotonic() - t0)
             assert origin_stats == expected
             LOGGER.info("%s is OK", origin)
 
@@ -500,8 +375,6 @@ def test_mirror(request, docker_client, mirror_stack):
                 rev = get(head["target_url"])
                 swhid = f"swh:1:dir:{rev['directory']}"
                 break
-            else:
-                breakpoint()
 
         LOGGER.info("Directory is %s", swhid)
         cook = post(f"{API_URL}/vault/flat/{swhid}/")
@@ -553,12 +426,13 @@ def test_mirror(request, docker_client, mirror_stack):
     LOGGER.info("Scale %s to %d", service.spec.name, 1)
     service.scale(1)
 
+    removal_id = "test_removal_swh_core"
     LOGGER.info("Scaled %s to %d", service.spec.name, 1)
-    subject = "[Action needed] Removal from the main Software Heritage archive (TEST_REMOVAL_1)"
+    subject = f"[Action needed] Removal from the main Software Heritage archive ({removal_id})"
     # beware these are not "basic" quotes...
     logentries = [
         "Watching notifications for mirrors",
-        "Received a removal notification “TEST_REMOVAL_1”",
+        f"Received a removal notification “{removal_id}”",
         f"Sending email “{subject}”",
     ]
     for logentry in logentries:
@@ -584,7 +458,7 @@ def test_mirror(request, docker_client, mirror_stack):
     origin = "https://github.com/SoftwareHeritage/swh-core"
     LOGGER.info(f"Checking swh-core github origin has been masked ({origin})")
     with pytest.raises(requests.HTTPError) as exc:
-        next(origin_get(origin))
+        get(f"{API_URL}/origin/{origin}/visit/latest/")
     assert exc.value.response.status_code == 403
 
     # check that the swh.core pypi package remains OK
@@ -596,3 +470,8 @@ def test_mirror(request, docker_client, mirror_stack):
     # TODO: respawn a pair of vault cooking to check both origins are handled
     # properly, aka the masked one should not be cookable while the pypi
     # package shoud work the same as before...
+    #
+    # NOTE: this is currently not a valid test because there is no vault cache
+    # invalidation mechanism related to TDN/masking so far. So the already
+    # cooked export for this now-masked origin will still be present (which is
+    # an issue but not a mirror specific one).
