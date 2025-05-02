@@ -470,6 +470,7 @@ services:
       - ./env/common-python.env
     environment:
       STATSD_TAGS: 'role:graph-replayer,hostname:$${HOSTNAME}'
+      SWH_LOG_LEVEL: WARNING
     configs:
       - source: graph-replayer
         target: /etc/softwareheritage/config.yml
@@ -490,7 +491,7 @@ services:
       - ./env/common-python.env
     environment:
       STATSD_TAGS: 'role:content-replayer,hostname:$${X_NODE_HOSTNAME}'
-      LOG_LEVEL: 'INFO --log-level azure:ERROR'
+      SWH_LOG_LEVEL: 'INFO azure:ERROR'
     configs:
       - source: content-replayer
         target: /etc/softwareheritage/config.yml
@@ -556,7 +557,7 @@ services:
       PGUSER_0: swh
       POSTGRES_DB_0: swh-vault
       PORT: "5005"
-      LOG_LEVEL: INFO
+      SWH_LOG_LEVEL: INFO
     command: ["rpc-server",  "vault"]
     secrets:
       - source: swh-mirror-vault-db-password
@@ -575,7 +576,7 @@ services:
       - ./env/celery-worker.env
     environment:
       SWH_WORKER_INSTANCE: vault
-      LOG_LEVEL: INFO
+      SWH_LOG_LEVEL: INFO
     configs:
       - source: vault-worker
         target: /etc/softwareheritage/config.yml
@@ -704,7 +705,7 @@ services:
     env_file:
       - ./env/common-python.env
     environment:
-      SWH_LOG_LEVELS: debug
+      SWH_LOG_LEVEL: DEBUG
       PGCFG_0: swh-storage
       PGHOST_0: storage-db
       PGUSER_0: swh

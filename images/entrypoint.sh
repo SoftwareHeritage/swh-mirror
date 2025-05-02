@@ -57,7 +57,7 @@ case "$1" in
                     --pool=prefork --events \
                     --concurrency=${CONCURRENCY} \
                     --max-tasks-per-child=${MAX_TASKS_PER_CHILD} \
-                    -Ofair --loglevel=${LOGLEVEL:-INFO} \
+                    -Ofair --loglevel=${CELERY_LOG_LEVEL:-INFO} \
                     --hostname "${SWH_WORKER_INSTANCE}@%h"
         ;;
 
@@ -73,7 +73,7 @@ case "$1" in
              --bind unix:/var/run/gunicorn/swh/$1.sock \
              --threads ${GUNICORN_THREADS:-4} \
              --workers ${GUNICORN_WORKERS:-16} \
-             --log-level "${LOG_LEVEL:-WARNING}" \
+             --log-level "${GUNICORN_LOG_LEVEL:-WARNING}" \
              --timeout ${GUNICORN_TIMEOUT:-3600} \
              --statsd-host=prometheus-statsd-exporter:9125 \
              --statsd-prefix=service.app.$1  \
@@ -91,32 +91,28 @@ case "$1" in
 
         echo "Starting the swh-scheduler $1"
         exec wait-for-it amqp:5672 -s --timeout=0 -- \
-             swh --log-level ${LOGLEVEL:-INFO} \
-         scheduler -C ${SWH_CONFIG_FILENAME} $@
+             swh scheduler -C ${SWH_CONFIG_FILENAME} $@
         ;;
 
     "graph-replayer")
         shift
         wait-for-it storage:5002
         echo "Starting the SWH mirror graph replayer"
-        exec swh --log-level ${LOG_LEVEL:-WARNING} \
-             storage replay $@
+        exec swh storage replay $@
         ;;
 
     "content-replayer")
         shift
         wait-for-it objstorage:5003
         echo "Starting the SWH mirror content replayer"
-        exec swh --log-level ${LOG_LEVEL:-WARNING} \
-             objstorage replay $@
+        exec swh objstorage replay $@
         ;;
 
     "search-indexer")
         shift
         wait-for-it search:5010
         echo "Starting the SWH search indexer"
-        exec swh --log-level ${LOG_LEVEL:-WARNING} \
-             search -C ${SWH_CONFIG_FILENAME} \
+        exec swh search -C ${SWH_CONFIG_FILENAME} \
              journal-client objects $@
         ;;
 
@@ -180,8 +176,7 @@ if not User.objects.filter(username = username).exists():
         fi
 
         echo "Starting a SWH storage scrubber ${CFGNAME}"
-        exec swh --log-level ${LOG_LEVEL:-WARNING} \
-             scrubber check storage ${CFGNAME} $@
+        exec swh scrubber check storage ${CFGNAME} $@
         ;;
 
     *)
