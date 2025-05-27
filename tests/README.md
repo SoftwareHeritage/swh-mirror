@@ -106,7 +106,7 @@ SWH_MIRROR_TEST_OBJSTORAGE_URL=https://<login>:<pwd>@objstorage.softwareheritage
 you should be able to execute the test:
 
 ```
-~/swh-mirror$ pytest
+~/swh-mirror$ pytest tests/test_mirror.py
 ============================== test session starts ==============================
 platform linux -- Python 3.9.2, pytest-6.2.5, py-1.9.0, pluggy-1.0.0
 rootdir: /home/ddouard/swh/swh-docker
@@ -126,6 +126,20 @@ tests/test_graph_replayer.py .                                            [100%]
 ```
 
 Note the test takes quite some time to execute, so be patient.
+
+### Testing the Casssandra-based storage
+
+An example deployment stack using a cassandra cluster instead of Postgresql for
+the strorage is also provided by the mean of the `mirror-cassandra.yml` compose
+file. This is used when running the test via the `test_mirror_cassandra.py` file.
+
+```
+~/swh-mirror$ pytest tests/test_mirror_cassandra.py
+
+[...]
+
+=========================== 1 passed in 790.66s (0:13:10) ============================
+```
 
 
 Troubleshooting

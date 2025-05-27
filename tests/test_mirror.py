@@ -1,4 +1,4 @@
-# Copyright (C) 2022  The Software Heritage developers
+# Copyright (C) 2022-2025  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -10,6 +10,7 @@ import tarfile
 import time
 from typing import Dict
 from urllib.parse import quote
+from uuid import uuid4
 
 from confluent_kafka import Consumer, KafkaException
 import msgpack
@@ -20,7 +21,7 @@ import pytest
 
 from swh.storage import get_storage
 
-from .conftest import API_URL, BASE_URL, KAFKA_BROKER, KAFKA_GROUPID, KAFKA_PASSWORD, KAFKA_USERNAME, LOGGER
+from .conftest import API_URL, BASE_URL, KAFKA_BROKER, KAFKA_PASSWORD, KAFKA_USERNAME, LOGGER
 
 INITIAL_SERVICES_STATUS = {
     "{}_amqp": "1/1",
@@ -45,7 +46,6 @@ INITIAL_SERVICES_STATUS = {
     "{}_search-journal-client-origin": "1/1",
     "{}_search-journal-client-visit": "1/1",
     "{}_storage": "1/1",
-    "{}_storage-db": "1/1",
     "{}_storage-public": "1/1",
     "{}_vault": "1/1",
     "{}_vault-db": "1/1",
@@ -239,7 +239,7 @@ def get_expected_stats():
         "bootstrap.servers": KAFKA_BROKER,
         "sasl.username": KAFKA_USERNAME,
         "sasl.password": KAFKA_PASSWORD,
-        "group.id": KAFKA_GROUPID,
+        "group.id": f"{KAFKA_USERNAME}-{uuid4()}",
         "security.protocol": "sasl_ssl",
         "sasl.mechanism": "SCRAM-SHA-512",
         "session.timeout.ms": 600000,
@@ -401,7 +401,7 @@ def test_mirror(request, docker_client, mirror_stack):
             tarinfo = tarfileobj.getmember(path)
             url = f"{API_URL}/directory/{quote(path[10:])}"
             expected = get(url)  # remove the 'swh:1:dir:' part
-            LOGGER.info("Retrieved from storage: %s → %s", url, expected)
+            LOGGER.debug("Retrieved from storage: %s → %s", url, expected)
             if expected["type"] == "dir":
                 assert tarinfo.isdir()
             elif expected["type"] == "file":
@@ -441,7 +441,7 @@ def test_mirror(request, docker_client, mirror_stack):
 
     # check the notification email has been sent
     LOGGER.info("Checking expected email message has been sent")
-    for i in range(5):
+    for i in range(10):
         messages = get(f"{BASE_URL}/mail/api/v2/messages")
         if messages["count"] >= 1:
             break

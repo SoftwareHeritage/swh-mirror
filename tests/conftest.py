@@ -1,4 +1,4 @@
-# Copyright (C) 2022  The Software Heritage developers
+# Copyright (C) 2022-2025  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -18,7 +18,6 @@ SRC_PATH = Path(__file__).resolve().parent.parent
 KAFKA_USERNAME = environ["SWH_MIRROR_TEST_KAFKA_USERNAME"]
 KAFKA_PASSWORD = environ["SWH_MIRROR_TEST_KAFKA_PASSWORD"]
 KAFKA_BROKER = environ["SWH_MIRROR_TEST_KAFKA_BROKER"]
-KAFKA_GROUPID = f"{KAFKA_USERNAME}-{uuid4()}"
 OBJSTORAGE_URL = environ["SWH_MIRROR_TEST_OBJSTORAGE_URL"]
 BASE_URL = environ.get("SWH_MIRROR_TEST_API_URL", "http://127.0.0.1:5081")
 API_URL = environ.get("SWH_MIRROR_TEST_API_URL", f"{BASE_URL}/api/1")
@@ -41,13 +40,21 @@ def docker_client():
     return DockerClient()
 
 
-# scope='session' so we use the same container for all the tests;
-@pytest.fixture(scope="session")
-def mirror_stack(request, docker_client, tmp_path_factory):
+@pytest.fixture(scope="module")
+def compose_file():
+    return "mirror.yml"
+
+
+@pytest.fixture(scope="module")
+def mirror_stack(request, docker_client, tmp_path_factory, compose_file):
+    # copy all the stack config files in a tmp directory to be able to resolve
+    # templated config files, aka. all the `conf/xxx.yml.test` are processed to
+    # generate the corresponding `conf/xxx.yml` file (to inject kafka config
+    # entries and the objstorage public URI which also requires basic auth).
     tmp_path = tmp_path_factory.mktemp("mirror")
     copytree(SRC_PATH / "conf", tmp_path / "conf")
     copytree(SRC_PATH / "env", tmp_path / "env")
-    copy(SRC_PATH / "mirror.yml", tmp_path)
+    copy(SRC_PATH / compose_file, tmp_path)
     Path(tmp_path / "secret").write_bytes(b"not-so-secret\n")
     cwd = Path.cwd()
     chdir(tmp_path)
@@ -55,7 +62,7 @@ def mirror_stack(request, docker_client, tmp_path_factory):
     conftmpl = {
         "username": KAFKA_USERNAME,
         "password": KAFKA_PASSWORD,
-        "group_id": KAFKA_GROUPID,
+        "group_id": f"{KAFKA_USERNAME}-{uuid4()}",
         "broker": KAFKA_BROKER,
         "objstorage_url": OBJSTORAGE_URL,
     }
@@ -89,8 +96,8 @@ def mirror_stack(request, docker_client, tmp_path_factory):
         "to avoid any incompatibilities in the stack"
     )
 
-    LOGGER.info("Deploy docker stack %s with SWH_IMAGE_TAG %s", stack_name, image_tag)
-    docker_stack = docker_client.stack.deploy(stack_name, "mirror.yml")
+    LOGGER.info("Deploy docker stack %s from %s with SWH_IMAGE_TAG %s", stack_name, compose_file, image_tag)
+    docker_stack = docker_client.stack.deploy(stack_name, compose_file)
 
     yield docker_stack
 
@@ -112,7 +119,7 @@ def mirror_stack(request, docker_client, tmp_path_factory):
                 )
                 docker_client.container.wait(stack_containers)
             except DockerException as e:
-                LOGGER.error("Docker error: %s", e)
+                LOGGER.error("Docker error (skipped): %s", e)
                 # We have a TOCTOU issue, so skip the error if some containers have already
                 # been stopped by the time we wait for them.
                 if "No such container" not in e.stderr:

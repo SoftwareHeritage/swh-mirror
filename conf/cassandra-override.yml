@@ -1,0 +1,21 @@
+
+# this config part is added at the end of the default config file provided
+# by the cassandra docker image; it only contains config options that cannot
+# be set using environment variables...
+
+data_file_directories:
+    - /var/lib/cassandra/data
+commitlog_directory: /var/lib/cassandra/commitlog
+saved_caches_directory: /var/lib/cassandra/saved_caches
+
+## these are actually defined in the default config file
+user_defined_functions_enabled: true
+materialized_views_enabled: true
+
+## probably not needed config options that used to be set...
+# key_cache_size: 1GB
+# commitlog_segment_size: 512MiB
+# rpc_address: 0.0.0.0
+
+## questionable options
+# cross_node_timeout: false

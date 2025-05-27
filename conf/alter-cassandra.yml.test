@@ -9,9 +9,6 @@ restoration_storage:
   timeout: 15
 
 removal_storages:
-  postgresql:
-    cls: postgresql
-    db: postgresql:///?service=swh-storage
   cassandra:
     cls: cassandra
     hosts:
@@ -43,13 +40,11 @@ recovery_bundles:
 journal_client:
   cls: kafka
   brokers:
-    - kafka1
-    - kafka2
-    - kafka3
-  prefix: swh.journal.mirror-notifications
-  group_id: test-user-graph-replayer-x-change-me
-  sasl.username: test-user
-  sasl.password: change-me
+    - {broker}
+  prefix: swh.test.mirror-notifications
+  group_id: {group_id}_tdn-wathcer
+  sasl.username: {username}
+  sasl.password: {password}
   security.protocol: sasl_ssl
   sasl.mechanism: SCRAM-SHA-512
 
@@ -64,5 +59,5 @@ emails:
   - sofia@example.org
 
 smtp:
-  host: smtp
+  host: mailhog
   port: 1025

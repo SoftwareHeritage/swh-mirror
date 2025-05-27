@@ -7,36 +7,28 @@ services:
     deploy:
       replicas: 1
 
-  storage-db:
-    # the main storage database
-    image: postgres:16
+  cassandra-seed:
     networks:
       - swh-mirror
-    deploy:
-      # we want only one replica of this service in the whole cluster
-      replicas: 1
-      # possible workaround to prevent dropped idle cnx (making pg pool fail to work after a while)
-      endpoint_mode: dnsrr
-      placement:
-        max_replicas_per_node: 1
-        constraints:
-          - node.labels.org.softwareheritage.mirror.volumes.storage-db == true
-    command:
-      - '--shared_buffers=4GB'
-      - '--effective_cache_size=4GB'
-      - '--random_page_cost=1.5'
-      - '--max_wal_size=4GB'
+    configs:
+      - source: cassandra-override
+        target: /cassandra-override.yml
+      - source: cassandra-entrypoint
+        target: /swh_entrypoint.sh
+        mode: 0555
+    entrypoint:
+      - /swh_entrypoint.sh
+    env_file:
+      - ./env/cassandra.env
     environment:
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
-      POSTGRES_USER: swh
-      POSTGRES_DB: swh-storage
-    volumes:
-      - "storage-db:/var/lib/postgresql/data:rw,Z"
-    secrets:
-      - source: swh-mirror-storage-db-password
-        target: postgres-password
-        uid: '999'
-        mode: 0400
+      SERVICENAME: '{{.Service.Name}}'
+    image: cassandra:5.0
+    deploy:
+      endpoint_mode: dnsrr
+      replicas: 3
+      #placement:
+      #  constraints:
+      #    - node.role == manager
 
   masking-proxy-db:
     # the database for the masking proxy
@@ -152,23 +144,15 @@ services:
       - "--perform"
       - "service=swh-storage"
     environment:
-      PGCFG_0: swh-storage
-      PGHOST_0: storage-db
+      PGCFG_0: swh-web
+      PGHOST_0: web-db
       PGUSER_0: swh
-      POSTGRES_DB_0: swh-storage
-      PGCFG_1: swh-web
-      PGHOST_1: web-db
-      PGUSER_1: swh
-      POSTGRES_DB_1: swh-web
+      POSTGRES_DB_0: swh-web
       PORT: "5004"
       DJANGO_SETTINGS_MODULE: swh.web.settings.production
     secrets:
       - source: swh-mirror-web-db-password
         target: postgres-password-swh-web
-        uid: '1000'
-        mode: 0400
-      - source: swh-mirror-storage-db-password
-        target: postgres-password-swh-storage
         uid: '1000'
         mode: 0400
     deploy:
@@ -227,7 +211,7 @@ services:
     command: ["rpc-server", "objstorage"]
 
   storage:
-    # the swh-storage backend service; using postgresql (storage-db) as backend
+    # the swh-storage backend service; using cassandra as backend
     image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
     networks:
       - swh-mirror
@@ -240,25 +224,16 @@ services:
       # is upgraded in a consistent way
       replicas: 1
     configs:
-      - source: storage
+      - source: storage-cassandra
         target: /etc/softwareheritage/config.yml
     environment:
-      PGCFG_0: swh-storage
-      PGHOST_0: storage-db
-      PGUSER_0: swh
-      POSTGRES_DB_0: swh-storage
-      DB_FLAVOR: mirror
       PORT: "5002"
+      CASSANDRA_SEEDS: cassandra-seed
     env_file:
       - ./env/common-python.env
-    secrets:
-      - source: swh-mirror-storage-db-password
-        target: postgres-password-swh-storage
-        uid: '1000'
-        mode: 0400
     command: ["rpc-server", "storage"]
     depends_on:
-      - storage-db
+      - cassandra-seed
 
   storage-public:
     # the swh-storage public backend service; comes with a masking proxy before
@@ -704,20 +679,12 @@ services:
       - ./env/common-python.env
     environment:
       SWH_LOG_LEVEL: DEBUG
-      PGCFG_0: swh-storage
-      PGHOST_0: storage-db
+      PGCFG_0: swh-masking-proxy
+      PGHOST_0: masking-proxy-db
       PGUSER_0: swh
-      POSTGRES_DB_0: swh-storage
-      PGCFG_1: swh-masking-proxy
-      PGHOST_1: masking-proxy-db
-      PGUSER_1: swh
-      POSTGRES_DB_1: swh-masking-proxy
+      POSTGRES_DB_0: swh-masking-proxy
     command: run-mirror-notification-watcher
     secrets:
-      - source: swh-mirror-storage-db-password
-        target: postgres-password-swh-storage
-        uid: '1000'
-        mode: 0400
       - source: swh-mirror-masking-proxy-db-password
         target: postgres-password-swh-masking-proxy
         uid: '1000'
@@ -731,7 +698,6 @@ volumes:
   objstorage:
   redis:
   scheduler-db:
-  storage-db:
   masking-proxy-db:
   vault-db:
   web-db:
@@ -740,8 +706,6 @@ volumes:
   elasticsearch-data:
 
 secrets:
-  swh-mirror-storage-db-password:
-    external: true
   swh-mirror-masking-proxy-db-password:
     external: true
   swh-mirror-web-db-password:
@@ -753,9 +717,9 @@ secrets:
 
 configs:
   alter:
-    file: conf/alter.yml
-  storage:
-    file: conf/storage.yml
+    file: conf/alter-cassandra.yml
+  storage-cassandra:
+    file: conf/storage-cassandra.yml
   storage-public:
     file: conf/storage-public.yml
   objstorage:
@@ -798,6 +762,10 @@ configs:
     file: conf/grafana/dashboards/content-replayer.json
   grafana-dashboards-backend-stats:
     file: conf/grafana/dashboards/backend-stats.json
+  cassandra-entrypoint:
+    file: conf/cassandra-swh-entrypoint.sh
+  cassandra-override:
+    file: conf/cassandra-override.yml
 
 
 networks:

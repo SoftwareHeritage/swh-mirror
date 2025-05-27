@@ -67,13 +67,24 @@ case "$1" in
             swh_setup_db $1
         fi
 
+        if [ "$1" == "storage" ] && [ -v CASSANDRA_SEEDS ]; then
+          echo Waiting for Cassandra to start
+          IFS=','
+          for CASSANDRA_SEED in ${CASSANDRA_SEEDS}; do
+              echo "   $CASSANDRA_SEED..."
+              wait-for-it ${CASSANDRA_SEED}:9042 -s --timeout=0
+          done
+          echo Creating keyspace
+          swh storage cassandra init
+        fi
+
         echo "Starting the SWH $1 RPC server"
         exec python3 -m gunicorn \
              --bind 0.0.0.0:${PORT:-5000} \
              --bind unix:/var/run/gunicorn/swh/$1.sock \
              --threads ${GUNICORN_THREADS:-4} \
              --workers ${GUNICORN_WORKERS:-16} \
-             --log-level "${GUNICORN_LOG_LEVEL:-WARNING}" \
+             --log-level ${GUNICORN_LOG_LEVEL:-WARNING} \
              --timeout ${GUNICORN_TIMEOUT:-3600} \
              --statsd-host=prometheus-statsd-exporter:9125 \
              --statsd-prefix=service.app.$1  \

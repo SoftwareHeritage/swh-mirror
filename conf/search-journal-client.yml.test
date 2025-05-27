@@ -19,7 +19,6 @@ journal:
   max.poll.interval.ms: 3600000
   message.max.bytes: 10485760
   fetch.max.bytes: 10485760
-  on_eof: "stop"
   object_types:
     - origin
     - origin_visit_status

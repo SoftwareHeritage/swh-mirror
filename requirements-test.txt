@@ -5,3 +5,4 @@ requests
 msgpack
 confluent-kafka
 python-on-whales
+swh.storage
