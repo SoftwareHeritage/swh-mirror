@@ -144,4 +144,15 @@ def mirror_stack(request, docker_client, tmp_path_factory, compose_file):
                 stack_volumes.append(volume)
                 retries += 1
                 sleep(1)
+
+        networks = docker_client.network.list(filters={"label=com.docker.stack.namespace": stack_name})
+        for network in networks:
+            LOGGER.warning(f"Enforce network {network.id} deletion (it should have been deleted already)")
+            try:
+                docker_client.network.remove(network.id)
+            except DockerException as e:
+                if f"network {network.id} not found" not in e.stderr:
+                    LOGGER.error(
+                        f"Could not enforce network {network.id} for the stack {stack_name} removal: {e.stderr}"
+                    )
     chdir(cwd)
