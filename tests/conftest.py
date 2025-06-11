@@ -32,7 +32,12 @@ def pytest_addoption(parser, pluginmanager):
         "--keep-stack", action="store_true", help="Do not teardown the docker stack"
     )
     parser.addoption(
-        "--full-check", action="store_true", help="Perform an exhaustive check that all objects have been replicated properly (slow)."
+        "--full-check",
+        action="store_true",
+        help=(
+            "Perform an exhaustive check that all objects have been "
+            "replicated properly (slow)."
+        ),
     )
 
 
@@ -98,7 +103,12 @@ def mirror_stack(request, docker_client, tmp_path_factory, compose_file):
         "to avoid any incompatibilities in the stack"
     )
 
-    LOGGER.info("Deploy docker stack %s from %s with SWH_IMAGE_TAG %s", stack_name, compose_file, image_tag)
+    LOGGER.info(
+        "Deploy docker stack %s from %s with SWH_IMAGE_TAG %s",
+        stack_name,
+        compose_file,
+        image_tag,
+    )
     docker_stack = docker_client.stack.deploy(stack_name, compose_file)
 
     try:
@@ -119,7 +129,9 @@ def mirror_stack(request, docker_client, tmp_path_factory, compose_file):
             logsdir.mkdir(exist_ok=True)
 
             for service in docker_stack.services():
-                LOGGER.info(f"Dumping logs for {service.spec.name} in {logsdir}/{service.spec.name}.log")
+                LOGGER.info(
+                    f"Dumping logs for {service.spec.name} in {logsdir}/{service.spec.name}.log"
+                )
                 (logsdir / f"{service.spec.name}.log").write_text(
                     docker_client.service.logs(service.spec.name, timestamps=True)
                 )
@@ -138,7 +150,9 @@ def mirror_stack(request, docker_client, tmp_path_factory, compose_file):
                 try:
                     LOGGER.info(
                         "Waiting for all %s containers of %s to be down (loop %s)",
-                        len(stack_containers), stack_name, i
+                        len(stack_containers),
+                        stack_name,
+                        i,
                     )
                     docker_client.container.wait(stack_containers)
                 except DockerException as e:
@@ -161,21 +175,29 @@ def mirror_stack(request, docker_client, tmp_path_factory, compose_file):
                     LOGGER.info("Removed volume %s", volume)
                 except DockerException:
                     if retries > 10:
-                        LOGGER.exception("Too many failures, giving up (volume=%s)", volume)
+                        LOGGER.exception(
+                            "Too many failures, giving up (volume=%s)", volume
+                        )
                         break
                     LOGGER.warning("Failed to remove volume %s; retrying...", volume)
                     stack_volumes.append(volume)
                     retries += 1
                     sleep(1)
 
-            networks = docker_client.network.list(filters={"label=com.docker.stack.namespace": stack_name})
+            networks = docker_client.network.list(
+                filters={"label=com.docker.stack.namespace": stack_name}
+            )
             for network in networks:
-                LOGGER.warning(f"Enforce network {network.id} deletion (it should have been deleted already)")
+                LOGGER.warning(
+                    f"Enforce network {network.id} deletion "
+                    "(it should have been deleted already)"
+                )
                 try:
                     docker_client.network.remove(network.id)
                 except DockerException as e:
                     if f"network {network.id} not found" not in e.stderr:
                         LOGGER.error(
-                            f"Could not enforce network {network.id} for the stack {stack_name} removal: {e.stderr}"
+                            f"Could not enforce network {network.id} "
+                            f"for the stack {stack_name} removal: {e.stderr}"
                         )
         chdir(cwd)

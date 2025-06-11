@@ -14,14 +14,19 @@ from uuid import uuid4
 
 from confluent_kafka import Consumer, KafkaException
 import msgpack
+import pytest
 from python_on_whales import DockerException
 import requests
-
-import pytest
-
 from swh.storage import get_storage
 
-from .conftest import API_URL, BASE_URL, KAFKA_BROKER, KAFKA_PASSWORD, KAFKA_USERNAME, LOGGER
+from .conftest import (
+    API_URL,
+    BASE_URL,
+    KAFKA_BROKER,
+    KAFKA_PASSWORD,
+    KAFKA_USERNAME,
+    LOGGER,
+)
 
 INITIAL_SERVICES_STATUS = {
     "{}_amqp": "1/1",
@@ -125,14 +130,18 @@ def wait_services_status(stack, target_status: Dict[str, int]):
             LOGGER.info("Got them all!")
             break
         if status != last_changed_status:
-            LOGGER.info("Not yet there %s",
-                        dict(set(status.items()) - set(target_status.items())))
+            LOGGER.info(
+                "Not yet there %s",
+                dict(set(status.items()) - set(target_status.items())),
+            )
             last_changed_status = status
         time.sleep(1)
     return status == target_status
 
 
-def wait_for_log_entry(docker_client, service, log_entry, occurrences=1, with_stderr=False):
+def wait_for_log_entry(
+    docker_client, service, log_entry, occurrences=1, with_stderr=False
+):
     count = 0
     for stream_type, stream_content in docker_client.service.logs(
         service, follow=True, stream=True
@@ -156,11 +165,11 @@ def wait_for_log_entry(docker_client, service, log_entry, occurrences=1, with_st
 
 def get_stats_from_storage(url):
 
+    from swh.model.model import ReleaseTargetType, SnapshotTargetType
     import swh.storage.algos.dir_iterators as DI
-    import swh.storage.algos.revisions_walker as RW
     import swh.storage.algos.origin as O
+    import swh.storage.algos.revisions_walker as RW
     import swh.storage.algos.snapshot as SN
-    from swh.model.model import  SnapshotTargetType, ReleaseTargetType
 
     storage = get_storage(
         cls="remote",
@@ -185,15 +194,29 @@ def get_stats_from_storage(url):
     snapshots = [SN.snapshot_get_all_branches(storage, snp_id) for snp_id in snp_ids]
     branches = [br for snp in snapshots for br in snp.branches.values() if br]
 
-    stats["release"] = len({br for br in branches if br.target_type == SnapshotTargetType.RELEASE})
-    stats["alias"] = len({br for br in branches if br.target_type == SnapshotTargetType.ALIAS})
-    stats["branch"] = len({br for br in branches if br.target_type == SnapshotTargetType.REVISION})
+    stats["release"] = len(
+        {br for br in branches if br.target_type == SnapshotTargetType.RELEASE}
+    )
+    stats["alias"] = len(
+        {br for br in branches if br.target_type == SnapshotTargetType.ALIAS}
+    )
+    stats["branch"] = len(
+        {br for br in branches if br.target_type == SnapshotTargetType.REVISION}
+    )
 
     # resolve aliases
-    rev_ids = {br.target for br in branches if br.target_type == SnapshotTargetType.REVISION}
-    rel_ids = {br.target for br in branches if br.target_type == SnapshotTargetType.RELEASE}
-    dir_ids = {br.target for br in branches if br.target_type == SnapshotTargetType.DIRECTORY}
-    snp_ids.update({br.target for br in branches if br.target_type == SnapshotTargetType.SNAPSHOT})
+    rev_ids = {
+        br.target for br in branches if br.target_type == SnapshotTargetType.REVISION
+    }
+    rel_ids = {
+        br.target for br in branches if br.target_type == SnapshotTargetType.RELEASE
+    }
+    dir_ids = {
+        br.target for br in branches if br.target_type == SnapshotTargetType.DIRECTORY
+    }
+    snp_ids.update(
+        {br.target for br in branches if br.target_type == SnapshotTargetType.SNAPSHOT}
+    )
 
     state = RW.State()
 
@@ -420,9 +443,7 @@ def test_mirror(request, docker_client, mirror_stack):
 
     ########################
     # test the TDN handling
-    service = docker_client.service.inspect(
-        f"{mirror_stack}_notification-watcher"
-    )
+    service = docker_client.service.inspect(f"{mirror_stack}_notification-watcher")
     LOGGER.info("Scale %s to %d", service.spec.name, 1)
     service.scale(1)
 
@@ -469,7 +490,7 @@ def test_mirror(request, docker_client, mirror_stack):
 
     # TODO: respawn a pair of vault cooking to check both origins are handled
     # properly, aka the masked one should not be cookable while the pypi
-    # package shoud work the same as before...
+    # package should work the same as before...
     #
     # NOTE: this is currently not a valid test because there is no vault cache
     # invalidation mechanism related to TDN/masking so far. So the already

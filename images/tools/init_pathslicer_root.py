@@ -9,6 +9,7 @@
 
 import os
 import sys
+
 from swh.core.config import read as config_read
 
 
@@ -31,6 +32,7 @@ def ensure_root(root):
     except PermissionError as exc:
         print(f"Failed to create directory: {exc}")
         sys.exit(1)
+
 
 config_file = os.environ.get("SWH_CONFIG_FILENAME")
 cfg = config_read(config_file)
