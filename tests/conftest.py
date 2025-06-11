@@ -12,6 +12,7 @@ from uuid import uuid4
 
 import pytest
 from python_on_whales import DockerClient, DockerException
+import requests
 
 SRC_PATH = Path(__file__).resolve().parent.parent
 
@@ -72,6 +73,7 @@ def mirror_stack(request, docker_client, tmp_path_factory, compose_file):
             outf.write(conffile.read_text().format(**conftmpl))
     # start the whole cluster
     stack_name = f"swhtest_{tmp_path.name}"
+    LOGGER.info(f"Setup test environment for stack {stack_name} in {tmp_path}")
 
     LOGGER.info("Create missing secrets")
     for srv in ("storage", "web", "vault", "scheduler"):
@@ -99,60 +101,81 @@ def mirror_stack(request, docker_client, tmp_path_factory, compose_file):
     LOGGER.info("Deploy docker stack %s from %s with SWH_IMAGE_TAG %s", stack_name, compose_file, image_tag)
     docker_stack = docker_client.stack.deploy(stack_name, compose_file)
 
-    yield docker_stack
+    try:
+        got_exception = False
+        # for the sake of early checks...
+        requests.get(BASE_URL).raise_for_status()
+        requests.get(f"{API_URL}").raise_for_status()
+        requests.get(f"{BASE_URL}/mail/api/v2/messages").raise_for_status()
 
-    if not request.config.getoption("keep_stack"):
-        LOGGER.info("Remove stack %s", stack_name)
-        docker_stack.remove()
+        yield docker_stack
+    except Exception:
+        got_exception = True
+        raise
+    finally:
+        if got_exception or request.node.session.testsfailed:
+            # dump all logs...
+            logsdir = tmp_path / "logs"
+            logsdir.mkdir(exist_ok=True)
 
-        for i in range(5):
-            stack_containers = docker_client.container.list(
+            for service in docker_stack.services():
+                LOGGER.info(f"Dumping logs for {service.spec.name} in {logsdir}/{service.spec.name}.log")
+                (logsdir / f"{service.spec.name}.log").write_text(
+                    docker_client.service.logs(service.spec.name, timestamps=True)
+                )
+
+        if not request.config.getoption("keep_stack"):
+            LOGGER.info("Remove stack %s", stack_name)
+            docker_stack.remove()
+
+            for i in range(5):
+                stack_containers = docker_client.container.list(
+                    filters={"label=com.docker.stack.namespace": stack_name}
+                )
+                if not stack_containers:
+                    LOGGER.info("No more running containers (loop %s)", i)
+                    break
+                try:
+                    LOGGER.info(
+                        "Waiting for all %s containers of %s to be down (loop %s)",
+                        len(stack_containers), stack_name, i
+                    )
+                    docker_client.container.wait(stack_containers)
+                except DockerException as e:
+                    LOGGER.error("Docker error (skipped): %s", e)
+                    # We have a TOCTOU issue, so skip the error if some containers have already
+                    # been stopped by the time we wait for them.
+                    if "No such container" not in e.stderr:
+                        raise
+
+            LOGGER.info("Remove volumes of stack %s", stack_name)
+
+            stack_volumes = docker_client.volume.list(
                 filters={"label=com.docker.stack.namespace": stack_name}
             )
-            if not stack_containers:
-                LOGGER.info("No more running containers (loop %s)", i)
-                break
-            try:
-                LOGGER.info(
-                    "Waiting for all %s containers of %s to be down (loop %s)",
-                    len(stack_containers), stack_name, i
-                )
-                docker_client.container.wait(stack_containers)
-            except DockerException as e:
-                LOGGER.error("Docker error (skipped): %s", e)
-                # We have a TOCTOU issue, so skip the error if some containers have already
-                # been stopped by the time we wait for them.
-                if "No such container" not in e.stderr:
-                    raise
+            retries = 0
+            while stack_volumes:
+                volume = stack_volumes.pop(0)
+                try:
+                    volume.remove()
+                    LOGGER.info("Removed volume %s", volume)
+                except DockerException:
+                    if retries > 10:
+                        LOGGER.exception("Too many failures, giving up (volume=%s)", volume)
+                        break
+                    LOGGER.warning("Failed to remove volume %s; retrying...", volume)
+                    stack_volumes.append(volume)
+                    retries += 1
+                    sleep(1)
 
-        LOGGER.info("Remove volumes of stack %s", stack_name)
-
-        stack_volumes = docker_client.volume.list(
-            filters={"label=com.docker.stack.namespace": stack_name}
-        )
-        retries = 0
-        while stack_volumes:
-            volume = stack_volumes.pop(0)
-            try:
-                volume.remove()
-                LOGGER.info("Removed volume %s", volume)
-            except DockerException:
-                if retries > 10:
-                    LOGGER.exception("Too many failures, giving up (volume=%s)", volume)
-                    break
-                LOGGER.warning("Failed to remove volume %s; retrying...", volume)
-                stack_volumes.append(volume)
-                retries += 1
-                sleep(1)
-
-        networks = docker_client.network.list(filters={"label=com.docker.stack.namespace": stack_name})
-        for network in networks:
-            LOGGER.warning(f"Enforce network {network.id} deletion (it should have been deleted already)")
-            try:
-                docker_client.network.remove(network.id)
-            except DockerException as e:
-                if f"network {network.id} not found" not in e.stderr:
-                    LOGGER.error(
-                        f"Could not enforce network {network.id} for the stack {stack_name} removal: {e.stderr}"
-                    )
-    chdir(cwd)
+            networks = docker_client.network.list(filters={"label=com.docker.stack.namespace": stack_name})
+            for network in networks:
+                LOGGER.warning(f"Enforce network {network.id} deletion (it should have been deleted already)")
+                try:
+                    docker_client.network.remove(network.id)
+                except DockerException as e:
+                    if f"network {network.id} not found" not in e.stderr:
+                        LOGGER.error(
+                            f"Could not enforce network {network.id} for the stack {stack_name} removal: {e.stderr}"
+                        )
+        chdir(cwd)
