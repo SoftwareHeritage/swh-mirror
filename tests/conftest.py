@@ -7,7 +7,7 @@ import logging
 from os import chdir, environ
 from pathlib import Path
 from shutil import copy, copytree
-from time import sleep
+from time import monotonic, sleep
 from uuid import uuid4
 
 import pytest
@@ -39,6 +39,20 @@ def pytest_addoption(parser, pluginmanager):
             "replicated properly (slow)."
         ),
     )
+
+
+def wait_for_it(url):
+    LOGGER.info(f"Waiting for {url}")
+    t0 = monotonic()
+    while monotonic() - t0 <= WFI_TIMEOUT:
+        try:
+            resp = requests.get(url)
+            resp.raise_for_status()
+            LOGGER.info(f"  Got it: {resp}")
+            return
+        except Exception:
+            sleep(1)
+    raise Exception("Connection error")
 
 
 @pytest.fixture(scope="session")
@@ -114,9 +128,20 @@ def mirror_stack(request, docker_client, tmp_path_factory, compose_file):
     try:
         got_exception = False
         # for the sake of early checks...
-        requests.get(BASE_URL).raise_for_status()
-        requests.get(f"{API_URL}").raise_for_status()
-        requests.get(f"{BASE_URL}/mail/api/v2/messages").raise_for_status()
+        LOGGER.info("Sanity checks:")
+        wait_for_it(BASE_URL)
+
+        resp = requests.get(BASE_URL)
+        LOGGER.info(f"BASE_URL: {resp}")
+        resp.raise_for_status()
+
+        resp = requests.get(f"{API_URL}")
+        LOGGER.info(f"API_URL: {resp}")
+        resp.raise_for_status()
+
+        resp = requests.get(f"{BASE_URL}/mail/api/v2/messages")
+        LOGGER.info(f"mailhog: {resp}")
+        resp.raise_for_status()
 
         yield docker_stack
     except Exception:
