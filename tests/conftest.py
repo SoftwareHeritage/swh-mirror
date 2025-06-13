@@ -10,6 +10,7 @@ from shutil import copy, copytree
 from time import monotonic, sleep
 from uuid import uuid4
 
+from confluent_kafka.admin import AdminClient
 import pytest
 from python_on_whales import DockerClient, DockerException
 import requests
@@ -225,4 +226,34 @@ def mirror_stack(request, docker_client, tmp_path_factory, compose_file):
                             f"Could not enforce network {network.id} "
                             f"for the stack {stack_name} removal: {e.stderr}"
                         )
+        # delete the tmp consumer groups
+        try:
+            cg_prefix = conftmpl["group_id"]
+            LOGGER.info(f"Deleting consumers groups starting with {cg_prefix}")
+            adm = AdminClient(
+                {
+                    "bootstrap.servers": conftmpl["broker"],
+                    "sasl.username": conftmpl["username"],
+                    "sasl.password": conftmpl["password"],
+                    "security.protocol": "sasl_ssl",
+                    "sasl.mechanism": "SCRAM-SHA-512",
+                }
+            )
+            cgroups = adm.list_consumer_groups()
+            while cgroups.running():
+                sleep(1)
+            cg_to_del = [
+                cg.group_id
+                for cg in cgroups.result().valid
+                if cg.group_id.startswith(cg_prefix)
+            ]
+            cgdel = adm.delete_consumer_groups(cg_to_del)
+            while cgdel.running():
+                sleep(1)
+            LOGGER.info(f"Deleted consumer groups {','.join(cg_to_del)}")
+
+        except Exception as exc:
+            LOGGER.warning(f"Failed to delete kafka consumer groups {cg_prefix}:")
+            LOGGER.warning(exc)
+
         chdir(cwd)
