@@ -39,7 +39,7 @@ journal_client:
   brokers:
     - {broker}
   prefix: swh.test.mirror-notifications
-  group_id: {group_id}_tdn-wathcer
+  group_id: {group_id}_tdn-watcher
   sasl.username: {username}
   sasl.password: {password}
   security.protocol: sasl_ssl
