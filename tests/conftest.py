@@ -254,10 +254,11 @@ def mirror_stack(request, docker_client, tmp_path_factory, compose_file):
                 for cg in cgroups.result().valid
                 if cg.group_id.startswith(cg_prefix)
             ]
-            cgdel = adm.delete_consumer_groups(cg_to_del)
-            while cgdel.running():
-                sleep(1)
-            LOGGER.info(f"Deleted consumer groups {','.join(cg_to_del)}")
+            if cg_to_del:
+                cgdel = adm.delete_consumer_groups(cg_to_del)
+                while any(x.running() for x in cgdel.values()):
+                    sleep(1)
+                LOGGER.info(f"Deleted consumer groups {','.join(cg_to_del)}")
 
         except Exception as exc:
             LOGGER.warning(f"Failed to delete kafka consumer groups {cg_prefix}:")
