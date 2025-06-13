@@ -158,9 +158,15 @@ def mirror_stack(request, docker_client, tmp_path_factory, compose_file):
                 LOGGER.info(
                     f"Dumping logs for {service.spec.name} in {logsdir}/{service.spec.name}.log"
                 )
-                (logsdir / f"{service.spec.name}.log").write_text(
-                    docker_client.service.logs(service.spec.name, timestamps=True)
-                )
+                try:
+                    (logsdir / f"{service.spec.name}.log").write_text(
+                        docker_client.service.logs(service.spec.name, timestamps=True)
+                    )
+                except Exception as exc:
+                    LOGGER.warning(
+                        f"Failed to dump logs for service {service.spec.name}"
+                    )
+                    LOGGER.warning(exc)
 
         if not request.config.getoption("keep_stack"):
             LOGGER.info("Remove stack %s", stack_name)
