@@ -80,10 +80,11 @@ def mirror_stack(request, docker_client, tmp_path_factory, compose_file):
     cwd = Path.cwd()
     chdir(tmp_path)
     # copy test-specific conf files
+    uuid = str(uuid4())
     conftmpl = {
         "username": KAFKA_USERNAME,
         "password": KAFKA_PASSWORD,
-        "group_id": f"{KAFKA_USERNAME}-{uuid4()}",
+        "group_id": f"{KAFKA_USERNAME}-{uuid}",
         "broker": KAFKA_BROKER,
         "objstorage_url": OBJSTORAGE_URL,
     }
@@ -92,7 +93,7 @@ def mirror_stack(request, docker_client, tmp_path_factory, compose_file):
         with open(conffile.as_posix()[:-5], "w") as outf:
             outf.write(conffile.read_text().format(**conftmpl))
     # start the whole cluster
-    stack_name = f"swhtest_{tmp_path.name}"
+    stack_name = f"swhtest_{uuid.split('-')[0]}"
     LOGGER.info(f"Setup test environment for stack {stack_name} in {tmp_path}")
 
     LOGGER.info("Create missing secrets")
