@@ -67,6 +67,8 @@ case "$1" in
             swh_setup_db $1
         fi
 
+        # this series of service/backend specific init/setup code is not very
+        # pretty, but will do for now
         if [ "$1" == "storage" ] && [ -v CASSANDRA_SEEDS ]; then
           echo Waiting for Cassandra to start
           IFS=','
@@ -76,6 +78,11 @@ case "$1" in
           done
           echo Creating keyspace
           swh storage cassandra init
+        fi
+
+        if [ "$1" == "search" ]; then
+            echo Waiting for elasticsearch
+            wait-for-it elasticsearch:9200 -s --timeout=0
         fi
 
         echo "Starting the SWH $1 RPC server"
