@@ -1,0 +1,14 @@
+storage:
+  cls: cassandra
+  hosts:
+    - <cassandra-seed1>
+    - <cassandra-seed2>
+  keyspace: swh
+  auth_provider:
+    cls: cassandra.auth.PlainTextAuthProvider
+    username: <username>
+    password: <password>
+
+  objstorage:
+    cls: remote
+    url: http://objstorage:5003/
