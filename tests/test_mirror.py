@@ -313,6 +313,9 @@ def get_expected_stats(group_prefix):
                 stats[k] = v
     except KeyboardInterrupt:
         assert False, "%% Aborted by user"
+    finally:
+        consumer.unsubscribe()
+        consumer.close()
     return stats
 
 
