@@ -8,7 +8,10 @@ As of today, only docker swarm based deployment tests are available.
 ## docker swarm deployment tests
 
 This test is using a Docker Swarm to orchestrate the deployment and checks that
-are made against the replicated Software Heritage Archive.
+are made against the replicated Software Heritage Archive. It executes the test
+described below in 2 different environments:
+- one in which the storage is deployed in a Postgresql database, and
+- one in which the storage is deployed using a 3 nodes Cassandra cluster.
 
 The idea of this test is:
 - a test dataset is built by loading a few origins in a dedicated swh instance
@@ -103,7 +106,7 @@ SWH_MIRROR_TEST_KAFKA_USERNAME=mirror-test-ro
 SWH_MIRROR_TEST_OBJSTORAGE_URL=https://<login>:<pwd>@objstorage.softwareheritage.org/
 ```
 
-you should be able to execute the test:
+you should be able to execute both the default (postgresql based) test:
 
 ```
 ~/swh-mirror$ pytest tests/test_mirror.py
