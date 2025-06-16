@@ -166,10 +166,10 @@ def wait_for_log_entry(
 def get_stats_from_storage(url):
 
     from swh.model.model import ReleaseTargetType, SnapshotTargetType
-    import swh.storage.algos.dir_iterators as DI
-    import swh.storage.algos.origin as O
-    import swh.storage.algos.revisions_walker as RW
-    import swh.storage.algos.snapshot as SN
+    import swh.storage.algos.dir_iterators as algo_DI
+    import swh.storage.algos.origin as algo_O
+    import swh.storage.algos.revisions_walker as algo_RW
+    import swh.storage.algos.snapshot as algo_SN
 
     storage = get_storage(
         cls="remote",
@@ -181,17 +181,19 @@ def get_stats_from_storage(url):
 
     stats = {"origin": url}
 
-    visits = list(O.iter_origin_visits(storage, url))
+    visits = list(algo_O.iter_origin_visits(storage, url))
     stats["visit"] = len(visits)
 
     snp_ids = {
         vs.snapshot
         for v in visits
-        for vs in O.iter_origin_visit_statuses(storage, url, v.visit)
+        for vs in algo_O.iter_origin_visit_statuses(storage, url, v.visit)
         if vs.snapshot
     }
 
-    snapshots = [SN.snapshot_get_all_branches(storage, snp_id) for snp_id in snp_ids]
+    snapshots = [
+        algo_SN.snapshot_get_all_branches(storage, snp_id) for snp_id in snp_ids
+    ]
     branches = [br for snp in snapshots for br in snp.branches.values() if br]
 
     stats["release"] = len(
@@ -218,7 +220,7 @@ def get_stats_from_storage(url):
         {br.target for br in branches if br.target_type == SnapshotTargetType.SNAPSHOT}
     )
 
-    state = RW.State()
+    state = algo_RW.State()
 
     all_revs = set()
     all_cnts = set()
@@ -239,13 +241,13 @@ def get_stats_from_storage(url):
 
     for rev_id in rev_ids:
         all_revs.add(rev_id)
-        for rev_d in RW.BFSRevisionsWalker(storage, rev_id, state=state):
+        for rev_d in algo_RW.BFSRevisionsWalker(storage, rev_id, state=state):
             all_revs.add(rev_d["id"])
             dir_ids.add(rev_d["directory"])
 
     for dir_id in dir_ids:
         all_dirs.add(dir_id)
-        for direntry in DI.dir_iterator(storage, dir_id):
+        for direntry in algo_DI.dir_iterator(storage, dir_id):
             if direntry["type"] == "dir":
                 all_dirs.add(direntry["target"])
             elif direntry["type"] == "file":
