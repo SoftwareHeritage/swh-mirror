@@ -138,7 +138,7 @@ def mirror_stack(request, docker_client, tmp_path_factory, compose_file):
         LOGGER.info(f"BASE_URL: {resp}")
         resp.raise_for_status()
 
-        resp = requests.get(f"{API_URL}")
+        resp = requests.get(f"{API_URL}/")
         LOGGER.info(f"API_URL: {resp}")
         resp.raise_for_status()
 

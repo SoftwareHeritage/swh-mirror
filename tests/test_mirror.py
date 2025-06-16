@@ -414,9 +414,11 @@ def test_mirror(request, docker_client, mirror_stack):
         origin, swhid, cook = cooks.pop(0)
         cook = get(f"{API_URL}/vault/flat/{swhid}")
         cooks.append((origin, swhid, cook))
+    LOGGER.info("All origins have been cooked")
 
     # should all be in "done" status
     for origin, swhid, cook in cooks:
+        LOGGER.info(f"Validating cooked directory for {origin} ({swhid})")
         assert cook["status"] == "done"
         # so we can download it
         tarfilecontent = get(cook["fetch_url"])
@@ -426,7 +428,7 @@ def test_mirror(request, docker_client, mirror_stack):
         assert all(fname.startswith(swhid) for fname in filelist)
         for path in filelist[1:]:
             tarinfo = tarfileobj.getmember(path)
-            url = f"{API_URL}/directory/{quote(path[10:])}"
+            url = f"{API_URL}/directory/{quote(path[10:])}/"
             expected = get(url)  # remove the 'swh:1:dir:' part
             LOGGER.debug("Retrieved from storage: %s → %s", url, expected)
             if expected["type"] == "dir":
@@ -444,6 +446,7 @@ def test_mirror(request, docker_client, mirror_stack):
                         sha1(tarfileobj.extractfile(tarinfo).read()).hexdigest()
                         == expected["checksums"]["sha1"]
                     )
+    LOGGER.info("All cooked origins have been validated")
 
     ########################
     # test the TDN handling
