@@ -81,10 +81,11 @@ def mirror_stack(request, docker_client, tmp_path_factory, compose_file):
     chdir(tmp_path)
     # copy test-specific conf files
     uuid = str(uuid4())
+    group_prefix = f"{KAFKA_USERNAME}-{uuid}"
     conftmpl = {
         "username": KAFKA_USERNAME,
         "password": KAFKA_PASSWORD,
-        "group_id": f"{KAFKA_USERNAME}-{uuid}",
+        "group_id": group_prefix,
         "broker": KAFKA_BROKER,
         "objstorage_url": OBJSTORAGE_URL,
     }
@@ -126,7 +127,7 @@ def mirror_stack(request, docker_client, tmp_path_factory, compose_file):
         image_tag,
     )
     docker_stack = docker_client.stack.deploy(stack_name, compose_file)
-
+    docker_stack._test_group_prefix = group_prefix  # used by get_expected_stats()
     try:
         got_exception = False
         # for the sake of early checks...

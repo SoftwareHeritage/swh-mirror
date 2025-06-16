@@ -10,7 +10,6 @@ import tarfile
 import time
 from typing import Dict
 from urllib.parse import quote
-from uuid import uuid4
 
 from confluent_kafka import Consumer, KafkaException
 import msgpack
@@ -258,13 +257,13 @@ def get_stats_from_storage(url):
     return stats
 
 
-def get_expected_stats():
+def get_expected_stats(group_prefix):
 
     cfg = {
         "bootstrap.servers": KAFKA_BROKER,
         "sasl.username": KAFKA_USERNAME,
         "sasl.password": KAFKA_PASSWORD,
-        "group.id": f"{KAFKA_USERNAME}-{uuid4()}",
+        "group.id": f"{group_prefix}_stats",
         "security.protocol": "sasl_ssl",
         "sasl.mechanism": "SCRAM-SHA-512",
         "session.timeout.ms": 600000,
@@ -353,7 +352,7 @@ def test_mirror(request, docker_client, mirror_stack):
         # TODO: check there are no error reported in redis after the replayers are done
 
     origins = get(f"{API_URL}/origins/")
-    expected_stats = get_expected_stats()
+    expected_stats = get_expected_stats(group_prefix=mirror_stack._test_group_prefix)
     # only check the complete replication when asked for (this is slow)
     if request.config.getoption("full_check"):
         # check replicated archive is in good shape
