@@ -1,0 +1,4 @@
+swh-core @ git+https://gitlab.softwareheritage.org/douardda/swh-core.git@fix-db-for-winery
+swh-storage @ git+https://gitlab.softwareheritage.org/douardda/swh-storage@fix_masking_db_scaffolding
+swh-objstorage @ git+https://gitlab.softwareheritage.org/swh/devel/swh-objstorage
+

@@ -5,9 +5,9 @@
 
 import pytest
 
-from .test_mirror import test_mirror
+from .test_mirror_basic import test_mirror  # noqa
 
 
 @pytest.fixture(scope="module")
 def compose_file():
-    return "mirror-cassandra.yml"
+    return "mirror-advanced.yml"

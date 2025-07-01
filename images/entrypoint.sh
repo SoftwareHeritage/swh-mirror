@@ -85,6 +85,17 @@ case "$1" in
             wait-for-it elasticsearch:9200 -s --timeout=0
         fi
 
+        if [ "$1" == "objstorage" ]; then
+            backend=$(yq -r .objstorage.cls $SWH_CONFIG_FILENAME)
+            if [ "$backend" == "winery" ]; then
+                echo Custom db initialisation for winery
+                wait_pgsql
+                swh db init-admin -d service=$POSTGRES_DB objstorage:winery
+                swh db init -d service=$POSTGRES_DB objstorage:winery
+                swh db upgrade --non-interactive -d service=$POSTGRES_DB objstorage:winery
+            fi
+        fi
+
         echo "Starting the SWH $1 RPC server"
         exec python3 -m gunicorn \
              --bind 0.0.0.0:${PORT:-5000} \
@@ -135,9 +146,16 @@ case "$1" in
         ;;
 
     "run-mirror-notification-watcher")
-      shift
-      exec swh alter run-mirror-notification-watcher "$@"
-      ;;
+        shift
+        exec swh alter run-mirror-notification-watcher "$@"
+        ;;
+
+    "winery")
+        shift
+        wait_pgsql
+        wait-for-it objstorage:5003
+        exec swh objstorage winery $@
+        ;;
 
     "web")
         wait_pgsql

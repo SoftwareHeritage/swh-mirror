@@ -14,3 +14,5 @@ swh-scrubber
 swh-search
 swh-vault[graph]
 swh-web
+# ensure we don't use the pure python psycopg
+psycopg[c]

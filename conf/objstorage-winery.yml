@@ -1,0 +1,60 @@
+objstorage:
+  cls: winery
+
+  # boolean (false (default): allow writes, true: only allow reads)
+  readonly: false
+  allow_delete: true
+
+  # Shared database settings
+  database:
+    # string: PostgreSQL connection string for the object index and read-write
+    # shards
+    db: postgresql:///?service=swh-winery
+    # string: PostgreSQL application name for connections (unset by default)
+    application_name: null
+
+  # Shards-related settings
+  shards:
+    # integer: threshold in bytes above which shards get packed. Can be
+    # overflowed by the max allowed object size.
+    # recommended value for producition system is 100GB
+    max_size: 10_000_000
+    # float: timeout in seconds after which idle read-write shards get
+    # released by the winery writer process
+    rw_idle_timeout: 300
+
+  # Shards pool settings
+  shards_pool:
+    ## Settings for the directory shards pool
+    # Shards are stored in `{base_directory}/{pool_name}`
+    type: directory
+    base_directory: /srv/softwareheritage/winery
+    pool_name: shards
+
+  # Optional throttler configuration, leave unset to disable throttling
+  throttler:
+    # string: PostgreSQL connection string for the throttler database. Can be
+    # shared with (and defaults to) the main database set in the `database`
+    # section. Must be read-write even for readonly instances.
+    db: postgresql:///?service=swh-winery
+    # integer: max read bytes per second
+    max_read_bps: 100_000_000
+    # integer: max write bytes per second
+    max_write_bps: 100_000_000
+
+  # Packer-related settings
+  packer:
+    # Whether the winery writer should start packing shards immediately, or
+    # defer to the standalone packer (default: true, the writer launches a
+    # background packer process)
+    pack_immediately: true
+    # Whether the packer should create shards in the shard pool, or defer to
+    # the pool manager (default: true, the packer creates images)
+    create_images: true
+    # Whether the packer should clean read-write shards from the database
+    # immediately, or defer to the rw shard cleaner (default: true, the packer
+    # cleans read-write shards immediately)
+    clean_immediately: true
+
+
+client_max_size: 1073741824

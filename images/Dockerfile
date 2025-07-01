@@ -2,6 +2,10 @@
 FROM rust:slim-bookworm AS build_rage
 RUN cargo install rage
 
+# build yq (stolen from https://github.com/mikefarah/yq/blob/master/Dockerfile)
+FROM golang:1.24 AS build_yq
+RUN CGO_ENABLED=0 go install -ldflags "-s" github.com/mikefarah/yq/v4@latest
+
 ARG pythonversion=3.11
 FROM python:${pythonversion:-3.11} AS swh-builder
 LABEL maintainer="Software Heritage <sysop@softwareheritage.org>"
@@ -86,6 +90,10 @@ COPY requirements.txt /srv/softwareheritage/requirements.txt
 RUN --mount=type=cache,mode=0755,uid=1000,gid=1000,target=/srv/softwareheritage/.cache/pip \
   pip install -r /srv/softwareheritage/requirements.txt
 
+#COPY requirements-extras.txt /srv/softwareheritage/requirements-extras.txt
+#RUN --mount=type=cache,mode=0755,uid=1000,gid=1000,target=/srv/softwareheritage/.cache/pip \
+#  pip install -r /srv/softwareheritage/requirements-extras.txt
+
 RUN pip freeze > /srv/softwareheritage/pip-freeze.txt
 
 ##################################
@@ -145,6 +153,8 @@ USER swh
 COPY --from=swh-builder /srv /srv
 # Install rage (for swh-alter)
 COPY --from=build_rage /usr/local/cargo/bin/rage /usr/local/cargo/bin/rage-keygen /usr/local/bin
+# Install yq
+COPY --from=build_yq /go/bin/yq /usr/local/bin
 
 ARG SWH_VER
 ENV SWH_VER=${SWH_VER}

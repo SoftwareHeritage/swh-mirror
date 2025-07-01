@@ -1,3 +1,8 @@
+# This example docker stack deployment file provides a complete mirror
+# deployment stack based on simple local-storage based data backends for both
+# swh-storage (using a postgresql backend) and swh-objstorage (using a
+# pathslicer backend on a docker volume).
+
 services:
   memcache:
     # used by the web app
@@ -152,23 +157,15 @@ services:
       - "--perform"
       - "service=swh-storage"
     environment:
-      PGCFG_0: swh-storage
-      PGHOST_0: storage-db
+      PGCFG_0: swh-web
+      PGHOST_0: web-db
       PGUSER_0: swh
-      POSTGRES_DB_0: swh-storage
-      PGCFG_1: swh-web
-      PGHOST_1: web-db
-      PGUSER_1: swh
-      POSTGRES_DB_1: swh-web
+      POSTGRES_DB_0: swh-web
       PORT: "5004"
       DJANGO_SETTINGS_MODULE: swh.web.settings.production
     secrets:
       - source: swh-mirror-web-db-password
         target: postgres-password-swh-web
-        uid: '1000'
-        mode: 0400
-      - source: swh-mirror-storage-db-password
-        target: postgres-password-swh-storage
         uid: '1000'
         mode: 0400
     deploy:
@@ -704,20 +701,12 @@ services:
       - ./env/common-python.env
     environment:
       SWH_LOG_LEVEL: DEBUG
-      PGCFG_0: swh-storage
-      PGHOST_0: storage-db
+      PGCFG_0: swh-masking-proxy
+      PGHOST_0: masking-proxy-db
       PGUSER_0: swh
-      POSTGRES_DB_0: swh-storage
-      PGCFG_1: swh-masking-proxy
-      PGHOST_1: masking-proxy-db
-      PGUSER_1: swh
-      POSTGRES_DB_1: swh-masking-proxy
+      POSTGRES_DB_0: swh-masking-proxy
     command: run-mirror-notification-watcher
     secrets:
-      - source: swh-mirror-storage-db-password
-        target: postgres-password-swh-storage
-        uid: '1000'
-        mode: 0400
       - source: swh-mirror-masking-proxy-db-password
         target: postgres-password-swh-masking-proxy
         uid: '1000'

@@ -63,7 +63,7 @@ def docker_client():
 
 @pytest.fixture(scope="module")
 def compose_file():
-    return "mirror.yml"
+    return "mirror-basic.yml"
 
 
 @pytest.fixture(scope="module")
@@ -98,7 +98,7 @@ def mirror_stack(request, docker_client, tmp_path_factory, compose_file):
     LOGGER.info(f"Setup test environment for stack {stack_name} in {tmp_path}")
 
     LOGGER.info("Create missing secrets")
-    for srv in ("storage", "web", "vault", "scheduler"):
+    for srv in ("storage", "web", "vault", "scheduler", "winery", "masking-proxy"):
         secret_name = f"swh-mirror-{srv}-db-password"
         try:
             docker_client.secret.create(secret_name, tmp_path / "secret")

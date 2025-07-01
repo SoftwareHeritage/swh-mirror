@@ -1,3 +1,7 @@
+# This example docker stack deployment file provides a complete mirror
+# deployment stack based on more realistic data backends for both swh-storage
+# (using a cassandra cluster) and swh-objstorage (using a winery backend)
+
 services:
   memcache:
     # used by the web app
@@ -180,6 +184,98 @@ services:
         constraints:
           - node.role == manager
 
+  winery-db:
+    image: postgres:16
+    networks:
+      - swh-mirror
+    deploy:
+      placement:
+        # note: if using a local volume, you need to pin the objstorage
+        # instances on the node hosting the volume, eg. the manager, otherwise,
+        # if using a remote/distributed objstorage backend (seaweedfs, cloud,
+        # etc.) you want to remove this placement constraint
+        constraints:
+          - node.labels.org.softwareheritage.mirror.volumes.objstorage == true
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password-swh-winery
+      POSTGRES_USER: swh
+      POSTGRES_DB: swh-winery
+    volumes:
+      - "winery-db:/var/lib/postgresql/data:rw,Z"
+    secrets:
+      - source: swh-mirror-winery-db-password
+        target: postgres-password-swh-winery
+        uid: '1000'
+        mode: 0400
+
+  winery-packer:
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    networks:
+      - swh-mirror
+    deploy:
+      placement:
+        # note: if using a local volume, you need to pin the objstorage
+        # instances on the node hosting the volume, eg. the manager, otherwise,
+        # if using a remote/distributed objstorage backend (seaweedfs, cloud,
+        # etc.) you want to remove this placement constraint
+        constraints:
+          - node.labels.org.softwareheritage.mirror.volumes.objstorage == true
+    env_file:
+      - ./env/common-python.env
+    volumes:
+      - "objstorage:/srv/softwareheritage/winery:rw,Z"
+    configs:
+      - source: objstorage
+        target: /etc/softwareheritage/config.yml
+    depends_on:
+      - winery-db
+      - objstorage  # wait for objstorage service to initialize the db
+    environment:
+      PGCFG_0: swh-winery
+      PGHOST_0: winery-db
+      PGUSER_0: swh
+      POSTGRES_DB_0: swh-winery
+    command: ["winery", "packer"]
+    secrets:
+      - source: swh-mirror-winery-db-password
+        target: postgres-password-swh-winery
+        uid: '1000'
+        mode: 0400
+
+  winery-cleaner:
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    networks:
+      - swh-mirror
+    deploy:
+      placement:
+        # note: if using a local volume, you need to pin the objstorage
+        # instances on the node hosting the volume, eg. the manager, otherwise,
+        # if using a remote/distributed objstorage backend (seaweedfs, cloud,
+        # etc.) you want to remove this placement constraint
+        constraints:
+          - node.labels.org.softwareheritage.mirror.volumes.objstorage == true
+    env_file:
+      - ./env/common-python.env
+    volumes:
+      - "objstorage:/srv/softwareheritage/winery:rw,Z"
+    configs:
+      - source: objstorage
+        target: /etc/softwareheritage/config.yml
+    depends_on:
+      - winery-db
+      - winery-packer
+    environment:
+      PGCFG_0: swh-winery
+      PGHOST_0: winery-db
+      PGUSER_0: swh
+      POSTGRES_DB_0: swh-winery
+    command: ["winery", "rw-shard-cleaner"]
+    secrets:
+      - source: swh-mirror-winery-db-password
+        target: postgres-password-swh-winery
+        uid: '1000'
+        mode: 0400
+
   objstorage:
     # the swh-objstorage backend service; this example configuration uses a simple
     # filesystem-based pathslicing implementation of the swh-objstorage: see
@@ -200,15 +296,33 @@ services:
         constraints:
           - node.labels.org.softwareheritage.mirror.volumes.objstorage == true
     volumes:
-      - "objstorage:/srv/softwareheritage/objects:rw,Z"
+      - "objstorage:/srv/softwareheritage/winery:rw,Z"
     configs:
       - source: objstorage
         target: /etc/softwareheritage/config.yml
     env_file:
       - ./env/common-python.env
     environment:
+      PGCFG_0: swh-winery
+      PGHOST_0: winery-db
+      PGUSER_0: swh
+      POSTGRES_DB_0: swh-winery
       PORT: "5003"
+      # we want to handle winery db init "by hand" for now, see the
+      # entrypoint.sh script
+      DB_SKIP_INIT: 1
+      # NOT USING gunicorn threads is CRITICAL for winery
+      GUNICORN_THREADS: 1
+      # beware of this: 1 winery objstorage process = 1 active shard
+      # so the total number of active shards will be 'replicas x workers'
+      GUNICORN_WORKERS: 4
+
     command: ["rpc-server", "objstorage"]
+    secrets:
+      - source: swh-mirror-winery-db-password
+        target: postgres-password-swh-winery
+        uid: '1000'
+        mode: 0400
 
   storage:
     # the swh-storage backend service; using cassandra as backend
@@ -704,6 +818,7 @@ volumes:
   prometheus:
   grafana:
   elasticsearch-data:
+  winery-db:
 
 secrets:
   swh-mirror-masking-proxy-db-password:
@@ -714,6 +829,8 @@ secrets:
     external: true
   swh-mirror-scheduler-db-password:
     external: true
+  swh-mirror-winery-db-password:
+    external: true
 
 configs:
   alter:
@@ -723,7 +840,7 @@ configs:
   storage-public:
     file: conf/storage-public.yml
   objstorage:
-    file: conf/objstorage.yml
+    file: conf/objstorage-winery.yml
   nginx:
     file: conf/nginx.conf
   scheduler:
