@@ -47,7 +47,7 @@ objstorage:
     # Whether the winery writer should start packing shards immediately, or
     # defer to the standalone packer (default: true, the writer launches a
     # background packer process)
-    pack_immediately: true
+    pack_immediately: false
     # Whether the packer should create shards in the shard pool, or defer to
     # the pool manager (default: true, the packer creates images)
     create_images: true

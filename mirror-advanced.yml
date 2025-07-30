@@ -242,40 +242,6 @@ services:
         uid: '1000'
         mode: 0400
 
-  winery-cleaner:
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
-    networks:
-      - swh-mirror
-    deploy:
-      placement:
-        # note: if using a local volume, you need to pin the objstorage
-        # instances on the node hosting the volume, eg. the manager, otherwise,
-        # if using a remote/distributed objstorage backend (seaweedfs, cloud,
-        # etc.) you want to remove this placement constraint
-        constraints:
-          - node.labels.org.softwareheritage.mirror.volumes.objstorage == true
-    env_file:
-      - ./env/common-python.env
-    volumes:
-      - "objstorage:/srv/softwareheritage/winery:rw,Z"
-    configs:
-      - source: objstorage
-        target: /etc/softwareheritage/config.yml
-    depends_on:
-      - winery-db
-      - winery-packer
-    environment:
-      PGCFG_0: swh-winery
-      PGHOST_0: winery-db
-      PGUSER_0: swh
-      POSTGRES_DB_0: swh-winery
-    command: ["winery", "rw-shard-cleaner"]
-    secrets:
-      - source: swh-mirror-winery-db-password
-        target: postgres-password-swh-winery
-        uid: '1000'
-        mode: 0400
-
   objstorage:
     # the swh-objstorage backend service; this example configuration uses a simple
     # filesystem-based pathslicing implementation of the swh-objstorage: see
