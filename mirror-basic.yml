@@ -106,7 +106,7 @@ services:
 
   web:
     # the web app; serves both the web navigation interface and the public web API
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
     networks:
       - swh-mirror
     configs:
@@ -137,7 +137,7 @@ services:
 
   sync-mailmap-cron:
     # cron-like job synchronizing mailmap declarations (web->storage)
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
     networks:
       - swh-mirror
     # these config files should not be needed for this service, but currently,
@@ -197,7 +197,7 @@ services:
     # the swh-objstorage backend service; this example configuration uses a simple
     # filesystem-based pathslicing implementation of the swh-objstorage: see
     # https://docs.softwareheritage.org/devel/apidoc/swh.objstorage.backends.pathslicing.html
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
     networks:
       - swh-mirror
     deploy:
@@ -225,7 +225,7 @@ services:
 
   storage:
     # the swh-storage backend service; using postgresql (storage-db) as backend
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
     networks:
       - swh-mirror
     deploy:
@@ -260,7 +260,7 @@ services:
   storage-public:
     # the swh-storage public backend service; comes with a masking proxy before
     # the actual storage allowing to hide objects after a TDN
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
     networks:
       - swh-mirror
     deploy:
@@ -394,7 +394,7 @@ services:
       - elasticsearch-data:/usr/share/elasticsearch/data
 
   search:
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
     networks:
       - swh-mirror
     env_file:
@@ -407,7 +407,7 @@ services:
     command: ["rpc-server", "search"]
 
   search-journal-client-origin:
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
     networks:
       - swh-mirror
     env_file:
@@ -418,7 +418,7 @@ services:
     command: ["search-indexer", "-o", "origin"]
 
   search-journal-client-visit:
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
     networks:
       - swh-mirror
     env_file:
@@ -450,7 +450,7 @@ services:
       - redis:/data
 
   graph-replayer:
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
     networks:
       - swh-mirror
     deploy:
@@ -476,7 +476,7 @@ services:
       - redis
 
   content-replayer:
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
     networks:
       - swh-mirror
     deploy:
@@ -536,7 +536,7 @@ services:
         mode: 0400
 
   vault:
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
     networks:
       - swh-mirror
     deploy:
@@ -561,7 +561,7 @@ services:
         mode: 0400
 
   vault-worker:
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
     networks:
       - swh-mirror
     deploy:
@@ -616,7 +616,7 @@ services:
         mode: 0400
 
   scheduler:
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
     networks:
       - swh-mirror
     deploy:
@@ -640,7 +640,7 @@ services:
         mode: 0400
 
   scheduler-listener:
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
     networks:
       - swh-mirror
     deploy:
@@ -664,7 +664,7 @@ services:
         mode: 0400
 
   scheduler-runner:
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
     networks:
       - swh-mirror
     deploy:
@@ -689,7 +689,7 @@ services:
 
   ## TDN propagation services
   notification-watcher:
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG:-latest}
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
     networks:
       - swh-mirror
     deploy:

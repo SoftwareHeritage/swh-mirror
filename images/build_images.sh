@@ -20,7 +20,6 @@ docker tag softwareheritage/mirror:${builddatetime} softwareheritage/mirror:late
 if [[ -n "${username}" ]] && [[ "${PUBLISH:=no}" = "yes" ]]; then
     echo "Publishing image softwareheritage/mirror:${builddatetime} on docker hub"
     docker push softwareheritage/mirror:${builddatetime}
-    docker push softwareheritage/mirror:latest
 fi
 
 eval set -- "$options"
