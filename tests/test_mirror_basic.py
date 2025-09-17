@@ -27,36 +27,6 @@ from .conftest import (
     LOGGER,
 )
 
-INITIAL_SERVICES_STATUS = {
-    "{}_amqp": "1/1",
-    "{}_content-replayer": "0/0",
-    "{}_elasticsearch": "1/1",
-    "{}_grafana": "1/1",
-    "{}_graph-replayer": "0/0",
-    "{}_masking-proxy-db": "1/1",
-    "{}_memcache": "1/1",
-    "{}_mailhog": "1/1",
-    "{}_nginx": "1/1",
-    "{}_notification-watcher": "0/0",
-    "{}_objstorage": "1/1",
-    "{}_prometheus": "1/1",
-    "{}_prometheus-statsd-exporter": "1/1",
-    "{}_redis": "1/1",
-    "{}_scheduler": "1/1",
-    "{}_scheduler-db": "1/1",
-    "{}_scheduler-listener": "1/1",
-    "{}_scheduler-runner": "1/1",
-    "{}_search": "1/1",
-    "{}_search-journal-client-origin": "1/1",
-    "{}_search-journal-client-visit": "1/1",
-    "{}_storage": "1/1",
-    "{}_storage-public": "1/1",
-    "{}_vault": "1/1",
-    "{}_vault-db": "1/1",
-    "{}_vault-worker": "1/1",
-    "{}_web": "1/1",
-    "{}_web-db": "1/1",
-}
 SCALE = 2
 session = requests.Session()
 adapter = requests.adapters.HTTPAdapter(
@@ -108,16 +78,16 @@ def is_task_running(task):
             raise
 
 
-def wait_services_status(stack, target_status: Dict[str, int]):
+def wait_services_status(stack, target_status: Dict[str, str]):
     LOGGER.info("Waiting for services %s", target_status)
-    last_changed_status = {}
+    last_changed_status: Dict[str, str] = {}
     while True:
         services = [
             service
             for service in stack.services()
             if service.spec.name in target_status
         ]
-        status = {
+        status: Dict[str, str] = {
             service.spec.name: "%s/%s"
             % (
                 len([True for task in service.ps() if is_task_running(task)]),
@@ -131,7 +101,7 @@ def wait_services_status(stack, target_status: Dict[str, int]):
         if status != last_changed_status:
             LOGGER.info(
                 "Not yet there %s",
-                dict(set(status.items()) - set(target_status.items())),
+                {k: v for k, v in status.items() if target_status.get(k) != v},
             )
             last_changed_status = status
         time.sleep(1)
@@ -319,31 +289,29 @@ def get_expected_stats(group_prefix):
     return stats
 
 
-def test_mirror(request, docker_client, mirror_stack):
+def test_mirror(
+    request, docker_client, mirror_stack, initial_services, replayer_services
+):
     initial_services_status = {
-        k.format(mirror_stack.name): v for k, v in INITIAL_SERVICES_STATUS.items()
+        k.format(mirror_stack.name): v for k, v in initial_services.items()
     }
     wait_services_status(mirror_stack, initial_services_status)
 
     ########################
     # run replayer services
-    for service_type in ("content", "graph"):
-        service = docker_client.service.inspect(
-            f"{mirror_stack}_{service_type}-replayer"
-        )
+    for service_name in replayer_services:
+        service = docker_client.service.inspect(f"{mirror_stack}_{service_name}")
         LOGGER.info("Scale %s to %d", service.spec.name, SCALE)
         service.scale(SCALE)
         wait_for_log_entry(
             docker_client,
             service,
-            f"Starting the SWH mirror {service_type} replayer",
+            "Starting the SWH mirror (graph|content) replayer",
             SCALE,
         )
 
-    for service_type in ("content", "graph"):
-        service = docker_client.service.inspect(
-            f"{mirror_stack}_{service_type}-replayer"
-        )
+    for service_name in replayer_services:
+        service = docker_client.service.inspect(f"{mirror_stack}_{service_name}")
         # wait for the replaying to be done (stop_on_oef is true)
         LOGGER.info("Wait for %s to be done", service.spec.name)
         wait_for_log_entry(docker_client, service, "Done.", SCALE)

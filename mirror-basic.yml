@@ -470,7 +470,20 @@ services:
       - source: graph-replayer
         target: /etc/softwareheritage/config.yml
     command:
-      - graph-replayer
+      - "graph-replayer"
+      - '--type=origin'
+      - '--type=origin_visit'
+      - '--type=origin_visit_status'
+      - '--type=snapshot'
+      - '--type=revision'
+      - '--type=release'
+      - '--type=skipped_content'
+      - '--type=metadata_authority'
+      - '--type=metadata_fetcher'
+      - '--type=raw_extrinsic_metadata'
+      - '--type=extid'
+      - '--type=content'
+      - '--type=directory'
     depends_on:
       - storage
       - redis

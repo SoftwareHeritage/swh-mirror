@@ -18,7 +18,7 @@ journal_client:
   cls: kafka
   brokers:
     - {broker}
-  group_id: {group_id}_replayer
+  group_id: {group_id}_replayer-content
   prefix: swh.test.objects
   sasl.username: {username}
   sasl.password: {password}

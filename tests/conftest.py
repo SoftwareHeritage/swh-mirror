@@ -28,6 +28,48 @@ WFI_TIMEOUT = 60
 LOGGER = logging.getLogger(__name__)
 
 
+INITIAL_SERVICES_STATUS = {
+    "{}_amqp": "1/1",
+    "{}_content-replayer": "0/0",
+    "{}_elasticsearch": "1/1",
+    "{}_grafana": "1/1",
+    "{}_graph-replayer": "0/0",
+    "{}_masking-proxy-db": "1/1",
+    "{}_memcache": "1/1",
+    "{}_mailhog": "1/1",
+    "{}_nginx": "1/1",
+    "{}_notification-watcher": "0/0",
+    "{}_objstorage": "1/1",
+    "{}_prometheus": "1/1",
+    "{}_prometheus-statsd-exporter": "1/1",
+    "{}_redis": "1/1",
+    "{}_scheduler": "1/1",
+    "{}_scheduler-db": "1/1",
+    "{}_scheduler-listener": "1/1",
+    "{}_scheduler-runner": "1/1",
+    "{}_search": "1/1",
+    "{}_search-journal-client-origin": "1/1",
+    "{}_search-journal-client-visit": "1/1",
+    "{}_storage": "1/1",
+    "{}_storage-public": "1/1",
+    "{}_vault": "1/1",
+    "{}_vault-db": "1/1",
+    "{}_vault-worker": "1/1",
+    "{}_web": "1/1",
+    "{}_web-db": "1/1",
+}
+
+
+@pytest.fixture
+def initial_services():
+    return INITIAL_SERVICES_STATUS.copy()
+
+
+@pytest.fixture
+def replayer_services():
+    return ("content-replayer", "graph-replayer")
+
+
 def pytest_addoption(parser, pluginmanager):
     parser.addoption(
         "--keep-stack", action="store_true", help="Do not teardown the docker stack"

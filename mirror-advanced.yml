@@ -507,7 +507,7 @@ services:
     volumes:
       - redis:/data
 
-  graph-replayer:
+  graph-replayer-content:
     image: softwareheritage/mirror:${SWH_IMAGE_TAG}
     networks:
       - swh-mirror
@@ -525,10 +525,65 @@ services:
       STATSD_TAGS: 'role:graph-replayer,hostname:$${HOSTNAME}'
       SWH_LOG_LEVEL: WARNING
     configs:
+      - source: graph-replayer-content
+        target: /etc/softwareheritage/config.yml
+    command:
+      - "graph-replayer"
+      - "--type=content"
+    depends_on:
+      - storage
+      - redis
+
+  graph-replayer-directory:
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
+    networks:
+      - swh-mirror
+    deploy:
+      # see above
+      replicas: 0
+    env_file:
+      - ./env/common-python.env
+    environment:
+      STATSD_TAGS: 'role:graph-replayer,hostname:$${HOSTNAME}'
+      SWH_LOG_LEVEL: WARNING
+    configs:
+      - source: graph-replayer-directory
+        target: /etc/softwareheritage/config.yml
+    command:
+      - "graph-replayer"
+      - "--type=directory"
+    depends_on:
+      - storage
+      - redis
+
+  graph-replayer:
+    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
+    networks:
+      - swh-mirror
+    deploy:
+      # see above
+      replicas: 0
+    env_file:
+      - ./env/common-python.env
+    environment:
+      STATSD_TAGS: 'role:graph-replayer,hostname:$${HOSTNAME}'
+      SWH_LOG_LEVEL: WARNING
+    configs:
       - source: graph-replayer
         target: /etc/softwareheritage/config.yml
     command:
-      - graph-replayer
+      - "graph-replayer"
+      - '--type=origin'
+      - '--type=origin_visit'
+      - '--type=origin_visit_status'
+      - '--type=snapshot'
+      - '--type=revision'
+      - '--type=release'
+      - '--type=skipped_content'
+      - '--type=metadata_authority'
+      - '--type=metadata_fetcher'
+      - '--type=raw_extrinsic_metadata'
+      - '--type=extid'
     depends_on:
       - storage
       - redis
@@ -831,6 +886,10 @@ configs:
     file: conf/content-replayer.yml
   graph-replayer:
     file: conf/graph-replayer.yml
+  graph-replayer-content:
+    file: conf/graph-replayer-content.yml
+  graph-replayer-directory:
+    file: conf/graph-replayer-directory.yml
   prometheus:
     file: conf/prometheus.yml
   prometheus-statsd-exporter:

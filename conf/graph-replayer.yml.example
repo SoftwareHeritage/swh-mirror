@@ -1,8 +1,6 @@
 storage:
   cls: pipeline
   steps:
-    - cls: filter
-    - cls: buffer
     - cls: tenacious
       error_rate_limit:
         # fail after 10 errors for 1000 operations
@@ -17,31 +15,16 @@ storage:
 journal_client:
   cls: kafka
   brokers:
-    - kafka1
-    - kafka2
-    - kafka3
-  group_id: test-user-graph-replayer-x-change-me
-  sasl.username: test-user
-  sasl.password: change-me
+    - <kafka1>
+    - <...>
+  group_id: <test-user>-graph-replayer-<x-change-me>
+  sasl.username: <test-user>
+  sasl.password: <password>
   security.protocol: sasl_ssl
   sasl.mechanism: SCRAM-SHA-512
   session.timeout.ms: 600000
   max.poll.interval.ms: 3600000
   message.max.bytes: 1000000000
-  object_types:
-    - content
-    - directory
-    - extid
-    - metadata_authority
-    - metadata_fetcher
-    - origin
-    - origin_visit
-    - origin_visit_status
-    - raw_extrinsic_metadata
-    - release
-    - revision
-    - skipped_content
-    - snapshot
   privileged: true
 
 replayer:
