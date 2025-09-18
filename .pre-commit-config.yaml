@@ -18,7 +18,7 @@ repos:
       - id: codespell
         name: Check source code spelling
         args: [-L crate]
-        stages: [commit]
+        stages: [pre-commit]
 
   - repo: https://github.com/PyCQA/isort
     rev: 5.10.1
