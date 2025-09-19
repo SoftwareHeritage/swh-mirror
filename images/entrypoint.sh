@@ -81,8 +81,9 @@ case "$1" in
         fi
 
         if [ "$1" == "search" ]; then
-            echo Waiting for elasticsearch
-            wait-for-it elasticsearch:9200 -s --timeout=0
+            ES_HOST=`yq '.search.hosts[0]' $SWH_CONFIG_FILENAME`
+            echo Waiting for elasticsearch host $ES_HOST
+            wait-for-it $ES_HOST -s --timeout=0
         fi
 
         if [ "$1" == "objstorage" ]; then
