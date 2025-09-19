@@ -297,6 +297,11 @@ def test_mirror(
     }
     wait_services_status(mirror_stack, initial_services_status)
 
+    # ensure we have a robots.txt served
+    robots = get(f"{BASE_URL}/robots.txt")
+    assert robots.startswith(b"User-agent:")
+    assert b"GPTBot" in robots
+
     ########################
     # run replayer services
     for service_name in replayer_services:

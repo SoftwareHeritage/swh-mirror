@@ -296,6 +296,8 @@ services:
     configs:
       - source: nginx
         target: /etc/nginx/nginx.conf
+      - source: nginx-robots
+        target: /usr/share/nginx/html/robots.txt
     ports:
       - "5081:5081/tcp"
     # an actual deployment would probably set this:
@@ -764,6 +766,8 @@ configs:
     file: conf/objstorage.yml
   nginx:
     file: conf/nginx.conf
+  nginx-robots:
+    file: conf/assets/nginx-robots.txt
   scheduler:
     file: conf/scheduler.yml
   vault:
