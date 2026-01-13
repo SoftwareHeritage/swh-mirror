@@ -9,6 +9,9 @@ objstorage_dst:
 
 journal_client:
   cls: kafka
+
+  ####################
+  # **TO BE MODIFIED**
   brokers:
     - kafka1
     - kafka2
@@ -16,6 +19,8 @@ journal_client:
   group_id: test-user-content-replayer-x-change-me
   sasl.username: test-user
   sasl.password: change-me
+  ####################
+
   security.protocol: sasl_ssl
   sasl.mechanism: SCRAM-SHA-512
   session.timeout.ms: 600000

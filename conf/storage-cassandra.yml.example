@@ -1,5 +1,8 @@
 storage:
   cls: cassandra
+
+  ####################
+  # **TO BE MODIFIED**
   hosts:
     - <cassandra-seed1>
     - <cassandra-seed2>
@@ -8,6 +11,7 @@ storage:
     cls: cassandra.auth.PlainTextAuthProvider
     username: <username>
     password: <password>
+  ####################
 
   objstorage:
     cls: remote

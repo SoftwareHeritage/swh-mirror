@@ -18,6 +18,7 @@ objstorage:
     # integer: threshold in bytes above which shards get packed. Can be
     # overflowed by the max allowed object size.
     # recommended value for producition system is 100GB
+    # **TO BE MODIFIED**
     max_size: 10_000_000
     # float: timeout in seconds after which idle read-write shards get
     # released by the winery writer process
@@ -28,6 +29,8 @@ objstorage:
     ## Settings for the directory shards pool
     # Shards are stored in `{base_directory}/{pool_name}`
     type: directory
+
+    # **TO BE MODIFIED**
     base_directory: /srv/softwareheritage/winery
     pool_name: shards
 

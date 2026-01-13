@@ -27,7 +27,10 @@ removal_objstorages:
 recovery_bundles:
   secret_sharing:
     minimum_required_groups: 2
+
     groups:
+      ####################
+      # **TO BE MODIFIED**
       legal:
         minimum_required_shares: 1
         recipient_keys:
@@ -36,20 +39,26 @@ recovery_bundles:
         minimum_required_shares: 1
         recipient_keys:
           Sofia: age1kdf2kzmw4wjr7anp55xuzknyphax6plr90rdpp8s35p69l5rxujsekpwxy
+      ####################
 
 # Specific to the mirror notification watcher
 # ===========================================
 
 journal_client:
   cls: kafka
+
+  ####################
+  # **TO BE MODIFIED**
   brokers:
     - kafka1
     - kafka2
     - kafka3
-  prefix: swh.journal.mirror-notifications
   group_id: test-user-graph-replayer-x-change-me
   sasl.username: test-user
   sasl.password: change-me
+  ####################
+
+  prefix: swh.journal.mirror-notifications
   security.protocol: sasl_ssl
   sasl.mechanism: SCRAM-SHA-512
 
@@ -58,11 +67,18 @@ masking_admin:
   db: postgresql:///?service=swh-masking-proxy
 
 emails:
+  ####################
+  # **TO BE MODIFIED**
   from: swh-mirror@example.org
   recipients:
   - lucio@example.org
   - sofia@example.org
+  ####################
 
 smtp:
-  host: smtp
+  ####################
+  # **TO BE MODIFIED**
+  # you should use your IT's provided SMTP here
+  host: mailhog
   port: 1025
+  ####################

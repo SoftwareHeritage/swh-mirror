@@ -14,12 +14,21 @@ storage:
 
 journal_client:
   cls: kafka
+
+  ####################
+  # **TO BE MODIFIED**
   brokers:
     - <kafka1>
     - <...>
-  group_id: <test-user>-graph-replayer-<x-change-me>
+  # Note: if deploying graph replayer services per object types (or groups of
+  # types), you should use differente consumer group ids, e.g.
+  # '<test-user>-graph-replater-directory-01' for the service dedicated to
+  # replaying only directories.
+  group_id: <test-user>-graph-replayer-<object-types>-<x-change-me>
   sasl.username: <test-user>
   sasl.password: <password>
+  ####################
+
   security.protocol: sasl_ssl
   sasl.mechanism: SCRAM-SHA-512
   session.timeout.ms: 600000

@@ -7,6 +7,8 @@ storage:
   url: http://storage:5002/
 
 journal:
+  ####################
+  # **TO BE MODIFIED**
   brokers:
     - kafka1
     - kafka2
@@ -14,6 +16,8 @@ journal:
   group_id: test-user-search-indexer-x-change-me
   sasl.username: test-user
   sasl.password: change-me
+  ####################
+
   security.protocol: sasl_ssl
   sasl.mechanism: SCRAM-SHA-512
   session.timeout.ms: 600000

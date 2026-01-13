@@ -29,6 +29,7 @@ serve_assets: yes
 production_db:
   name: postgresql:///?service=swh-web
 
+# **TO BE MODIFIED**
 secret_key: something_secret
 
 throttling:
@@ -66,6 +67,7 @@ throttling:
 # top bar can have custom links and donate link
 top_bar:
   links:
+    # **TO BE MODIFIED**
     Home: https://whatever.sdfa3.org/
   # donate_link:
 
@@ -92,6 +94,7 @@ swh_extra_django_apps:
 show_corner_ribbon: false
 
 # mirror partner specific configuration
+# **TO BE MODIFIED**
 mirror_config:
   partner_name: "TEST"
   partner_url: https://whatever.sdfa3.org/

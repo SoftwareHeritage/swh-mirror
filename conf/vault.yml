@@ -9,8 +9,16 @@ vault:
     url: http://scheduler:5008/
   cache:
     cls: pathslicing
+    ####################
+    # **TO BE MODIFIED**
     root: /srv/softwareheritage/vault
-    slicing: 0:5
+    slicing: 0:2/:4
+    ####################
+
   smtp:
+    ####################
+    # **TO BE MODIFIED**
+    # you should use your IT's provided SMTP here
     port: 1025
     host: mailhog
+    ####################
