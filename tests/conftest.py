@@ -6,6 +6,7 @@
 import logging
 from os import chdir, environ
 from pathlib import Path
+import re
 from shutil import copy, copytree
 from time import monotonic, sleep
 from uuid import uuid4
@@ -156,10 +157,13 @@ def mirror_stack(request, docker_client, tmp_path_factory, compose_file):
     for config in existing_configs:
         config.remove()
 
-    image_tag = environ.get("SWH_IMAGE_TAG", None)
-    assert image_tag and image_tag != "latest", (
-        "SWH_IMAGE_TAG needs to be set to a build tag "
-        "to avoid any incompatibilities in the stack"
+    default_image_tag = re.search(
+        r"image: softwareheritage/mirror:\$\{SWH_IMAGE_TAG:-(?P<tag>[0-9-]+)\}",
+        open(compose_file).read(),
+    )
+    image_tag = environ.get(
+        "SWH_IMAGE_TAG",
+        default_image_tag.group("tag") if default_image_tag else "unknown",
     )
 
     LOGGER.info(

@@ -3,6 +3,12 @@
 # swh-storage (using a postgresql backend) and swh-objstorage (using a
 # pathslicer backend on a docker volume).
 
+
+x-swh-service: &swh-service
+  image: softwareheritage/mirror:${SWH_IMAGE_TAG:-20251001-103527}
+  networks:
+    - swh-mirror
+
 services:
   memcache:
     # used by the web app
@@ -106,9 +112,7 @@ services:
 
   web:
     # the web app; serves both the web navigation interface and the public web API
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
-    networks:
-      - swh-mirror
+    <<: *swh-service
     configs:
       - source: web
         target: /etc/softwareheritage/config.yml
@@ -137,9 +141,7 @@ services:
 
   sync-mailmap-cron:
     # cron-like job synchronizing mailmap declarations (web->storage)
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
-    networks:
-      - swh-mirror
+    <<: *swh-service
     # these config files should not be needed for this service, but currently,
     # if missing, the mailmap script fails to load properly...
     configs:
@@ -197,9 +199,7 @@ services:
     # the swh-objstorage backend service; this example configuration uses a simple
     # filesystem-based pathslicing implementation of the swh-objstorage: see
     # https://docs.softwareheritage.org/devel/apidoc/swh.objstorage.backends.pathslicing.html
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
-    networks:
-      - swh-mirror
+    <<: *swh-service
     deploy:
       # needed to allow actual and dynamic load balancing
       endpoint_mode: dnsrr
@@ -225,9 +225,7 @@ services:
 
   storage:
     # the swh-storage backend service; using postgresql (storage-db) as backend
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
-    networks:
-      - swh-mirror
+    <<: *swh-service
     deploy:
       # needed to allow actual and dynammic load balancing
       endpoint_mode: dnsrr
@@ -260,9 +258,7 @@ services:
   storage-public:
     # the swh-storage public backend service; comes with a masking proxy before
     # the actual storage allowing to hide objects after a TDN
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
-    networks:
-      - swh-mirror
+    <<: *swh-service
     deploy:
       # needed to allow actual and dynammic load balancing
       endpoint_mode: dnsrr
@@ -396,9 +392,7 @@ services:
       - elasticsearch-data:/usr/share/elasticsearch/data
 
   search:
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
-    networks:
-      - swh-mirror
+    <<: *swh-service
     env_file:
       - ./env/common-python.env
     environment:
@@ -409,9 +403,7 @@ services:
     command: ["rpc-server", "search"]
 
   search-journal-client-origin:
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
-    networks:
-      - swh-mirror
+    <<: *swh-service
     env_file:
       - ./env/common-python.env
     configs:
@@ -420,9 +412,7 @@ services:
     command: ["search-indexer", "-o", "origin"]
 
   search-journal-client-visit:
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
-    networks:
-      - swh-mirror
+    <<: *swh-service
     env_file:
       - ./env/common-python.env
     configs:
@@ -452,9 +442,7 @@ services:
       - redis:/data
 
   graph-replayer:
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
-    networks:
-      - swh-mirror
+    <<: *swh-service
     deploy:
       # do not start replayers by default once the remaining of the stack is
       # running as expected, bump this value; expected real-life values should
@@ -491,9 +479,7 @@ services:
       - redis
 
   content-replayer:
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
-    networks:
-      - swh-mirror
+    <<: *swh-service
     deploy:
       # do not start replayers by default; see above
       replicas: 0
@@ -551,9 +537,7 @@ services:
         mode: 0400
 
   vault:
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
-    networks:
-      - swh-mirror
+    <<: *swh-service
     deploy:
       replicas: 1
     env_file:
@@ -576,9 +560,7 @@ services:
         mode: 0400
 
   vault-worker:
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
-    networks:
-      - swh-mirror
+    <<: *swh-service
     deploy:
       replicas: 1
     env_file:
@@ -631,9 +613,7 @@ services:
         mode: 0400
 
   scheduler:
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
-    networks:
-      - swh-mirror
+    <<: *swh-service
     deploy:
       replicas: 1
     configs:
@@ -655,9 +635,7 @@ services:
         mode: 0400
 
   scheduler-listener:
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
-    networks:
-      - swh-mirror
+    <<: *swh-service
     deploy:
       replicas: 1
     configs:
@@ -679,9 +657,7 @@ services:
         mode: 0400
 
   scheduler-runner:
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
-    networks:
-      - swh-mirror
+    <<: *swh-service
     deploy:
       replicas: 1
     configs:
@@ -704,9 +680,7 @@ services:
 
   ## TDN propagation services
   notification-watcher:
-    image: softwareheritage/mirror:${SWH_IMAGE_TAG}
-    networks:
-      - swh-mirror
+    <<: *swh-service
     deploy:
       replicas: 0  # do not start this at first, required for tests
     configs:
