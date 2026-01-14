@@ -6,23 +6,17 @@
 
 x-swh-service: &swh-service
   image: softwareheritage/mirror:${SWH_IMAGE_TAG:-20251001-103527}
-  networks:
-    - swh-mirror
 
 services:
   memcache:
     # used by the web app
     image: memcached:1.6
-    networks:
-      - swh-mirror
     deploy:
       replicas: 1
 
   storage-db:
     # the main storage database
     image: postgres:16
-    networks:
-      - swh-mirror
     deploy:
       # we want only one replica of this service in the whole cluster
       replicas: 1
@@ -52,8 +46,6 @@ services:
   masking-proxy-db:
     # the database for the masking proxy
     image: postgres:16
-    networks:
-      - swh-mirror
     deploy:
       # we want only one replica of this service in the whole cluster
       replicas: 1
@@ -83,8 +75,6 @@ services:
   web-db:
     # the database for the web application
     image: postgres:16
-    networks:
-      - swh-mirror
     deploy:
       # we want only one replica of this service in the whole cluster
       replicas: 1
@@ -182,8 +172,6 @@ services:
 
   swarm-cronjob:
     image: crazymax/swarm-cronjob
-    networks:
-      - swh-mirror
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
     environment:
@@ -287,8 +275,6 @@ services:
 
   nginx:
     image: nginx:1.25
-    networks:
-      - swh-mirror
     configs:
       - source: nginx
         target: /etc/nginx/nginx.conf
@@ -302,8 +288,6 @@ services:
 
   prometheus:
     image: prom/prometheus:v2.51.2
-    networks:
-      - swh-mirror
     depends_on:
     - prometheus-statsd-exporter
     command:
@@ -327,15 +311,11 @@ services:
   ## running in the swarm cluster, e.g. to allow a seaweedfs master to push metrics
   # prometheus-pushgateway:
   #   image: prom/pushgateway:v1.8.0
-  #   networks:
-  #     - swh-mirror
   #   ports:
   #     - 9091:9091
 
   prometheus-statsd-exporter:
     image: prom/statsd-exporter:v0.26.1
-    networks:
-      - swh-mirror
     command:
       - "--statsd.mapping-config=/etc/prometheus/statsd-mapping.yml"
     configs:
@@ -344,8 +324,6 @@ services:
 
   grafana:
     image: grafana/grafana:10.4.2
-    networks:
-      - swh-mirror
     deploy:
       # we want only one replica of this service in the whole cluster
       replicas: 1
@@ -377,8 +355,6 @@ services:
     # this is really just a minimal setup, not realistic for a production-like
     # environment
     image: elastic/elasticsearch:7.17.20
-    networks:
-      - swh-mirror
     deploy:
       resources:
         limits:
@@ -425,8 +401,6 @@ services:
 
   redis:
     image: redis:7.2
-    networks:
-      - swh-mirror
     deploy:
       # we want only one replica of this service in the whole cluster
       replicas: 1
@@ -501,16 +475,12 @@ services:
 
   amqp:
     image: rabbitmq:3.13-management
-    networks:
-      - swh-mirror
 
 ### vault services
 
   vault-db:
     # the database for the vault rpc server
     image: postgres:16
-    networks:
-      - swh-mirror
     deploy:
       # we want only one replica of this service in the whole cluster
       replicas: 1
@@ -577,16 +547,12 @@ services:
   # vault do really need someone to talk to via SMTP
   mailhog:
     image: mailhog/mailhog
-    networks:
-      - swh-mirror
 
 ### scheduler services
 
   scheduler-db:
     # the database for the vault rpc server
     image: postgres:16
-    networks:
-      - swh-mirror
     deploy:
       # we want only one replica of this service in the whole cluster
       replicas: 1
@@ -781,7 +747,7 @@ configs:
 
 
 networks:
-  swh-mirror:
+  default:
     driver: overlay
     attachable: true
     ipam:
