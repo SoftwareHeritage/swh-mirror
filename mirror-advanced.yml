@@ -13,6 +13,15 @@ services:
     deploy:
       replicas: 1
 
+  kafka-ui:
+    image: ghcr.io/kafbat/kafka-ui
+    environment:
+      SPRING_CONFIG_ADDITIONAL-LOCATION: /config.yml
+      SERVER_SERVLET_CONTEXT_PATH: /kafka-ui
+    configs:
+      - source: kafka-ui
+        target: /config.yml
+
   cassandra-seed:
     configs:
       - source: cassandra-override
@@ -840,11 +849,12 @@ configs:
     file: conf/grafana/dashboards/content-replayer.json
   grafana-dashboards-backend-stats:
     file: conf/grafana/dashboards/backend-stats.json
+  kafka-ui:
+    file: conf/kafka-ui.yml
   cassandra-entrypoint:
     file: conf/cassandra-swh-entrypoint.sh
   cassandra-override:
     file: conf/cassandra-override.yml
-
 
 networks:
   default:

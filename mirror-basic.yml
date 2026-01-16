@@ -14,6 +14,15 @@ services:
     deploy:
       replicas: 1
 
+  kafka-ui:
+    image: ghcr.io/kafbat/kafka-ui
+    environment:
+      SPRING_CONFIG_ADDITIONAL-LOCATION: /config.yml
+      SERVER_SERVLET_CONTEXT_PATH: /kafka-ui
+    configs:
+      - source: kafka-ui
+        target: /config.yml
+
   storage-db:
     # the main storage database
     image: postgres:16
@@ -744,6 +753,8 @@ configs:
     file: conf/grafana/dashboards/content-replayer.json
   grafana-dashboards-backend-stats:
     file: conf/grafana/dashboards/backend-stats.json
+  kafka-ui:
+    file: conf/kafka-ui.yml
 
 
 networks:
