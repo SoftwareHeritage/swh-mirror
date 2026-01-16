@@ -13,8 +13,8 @@ ownip="$(hostname)"
 #export CASSANDRA_SEEDS="$(nslookup tasks.$SERVICENAME | grep 'Address'| grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}' | sort | xargs | sed 's/ /,/g')"
 export CASSANDRA_SEEDS="$( python3 -c "import sys;import socket;print(','.join(sorted(socket.gethostbyname_ex(sys.argv[1])[2])))" tasks.$SERVICENAME )"
 export CASSANDRA_BROADCAST_ADDRESS=$ownip;
-echo $CASSANDRA_SEEDS
-echo $CASSANDRA_BROADCAST_ADDRESS
+echo "CASSANDRA_SEEDS=$CASSANDRA_SEEDS"
+echo "CASSANDRA_BROADCAST_ADDRESS=$CASSANDRA_BROADCAST_ADDRESS"
 
 
 exec docker-entrypoint.sh
