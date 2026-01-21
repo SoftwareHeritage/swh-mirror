@@ -29,7 +29,6 @@ journal_client:
   message.max.bytes: 10485760
   fetch.max.bytes: 10485760
   privileged: true
-  on_eof: "stop"
 
 replayer:
   error_reporter:

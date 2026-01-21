@@ -42,7 +42,6 @@ journal_client:
   fetch.max.bytes: 10485760
   privileged: true
   batch_size: 2000
-  on_eof: "stop"
 
 replayer:
   error_reporter:

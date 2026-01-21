@@ -35,6 +35,8 @@ INITIAL_SERVICES_STATUS = {
     "{}_elasticsearch": "1/1",
     "{}_grafana": "1/1",
     "{}_graph-replayer": "0/0",
+    "{}_graph-replayer-content": "0/0",
+    "{}_graph-replayer-directory": "0/0",
     "{}_masking-proxy-db": "1/1",
     "{}_memcache": "1/1",
     "{}_mailhog": "1/1",
@@ -68,7 +70,12 @@ def initial_services():
 
 @pytest.fixture
 def replayer_services():
-    return ("content-replayer", "graph-replayer")
+    return (
+        "content-replayer",
+        "graph-replayer",
+        "graph-replayer-content",
+        "graph-replayer-directory",
+    )
 
 
 def pytest_addoption(parser, pluginmanager):
@@ -175,24 +182,14 @@ def mirror_stack(request, docker_client, tmp_path_factory, compose_file):
     )
     docker_stack = docker_client.stack.deploy(stack_name, compose_file)
     docker_stack._test_group_prefix = group_prefix  # used by get_expected_stats()
+    docker_stack._test_conf_template = conftmpl
     try:
         got_exception = False
         # for the sake of early checks...
         LOGGER.info("Sanity checks:")
         wait_for_it(BASE_URL)
-
-        resp = requests.get(BASE_URL)
-        LOGGER.info(f"BASE_URL: {resp}")
-        resp.raise_for_status()
-
-        resp = requests.get(f"{API_URL}/")
-        LOGGER.info(f"API_URL: {resp}")
-        resp.raise_for_status()
-
-        resp = requests.get(f"{BASE_URL}/mail/api/v2/messages")
-        LOGGER.info(f"mailhog: {resp}")
-        resp.raise_for_status()
-
+        wait_for_it(f"{API_URL}/")
+        wait_for_it(f"{BASE_URL}/mail/api/v2/messages")
         yield docker_stack
     except Exception:
         got_exception = True
@@ -237,7 +234,6 @@ def mirror_stack(request, docker_client, tmp_path_factory, compose_file):
                     )
                     docker_client.container.wait(stack_containers)
                 except DockerException as e:
-                    LOGGER.error("Docker error (skipped): %s", e)
                     # We have a TOCTOU issue, so skip the error if some containers have already
                     # been stopped by the time we wait for them.
                     if "No such container" not in e.stderr:

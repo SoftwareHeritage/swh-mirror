@@ -315,17 +315,39 @@ def test_mirror(
             SCALE,
         )
 
-    for service_name in replayer_services:
-        service = docker_client.service.inspect(f"{mirror_stack}_{service_name}")
-        # wait for the replaying to be done (stop_on_oef is true)
-        LOGGER.info("Wait for %s to be done", service.spec.name)
-        wait_for_log_entry(docker_client, service, "Done.", SCALE)
+    group_prefix = mirror_stack._test_conf_template["group_id"]
+    cluster_name = mirror_stack._test_conf_template["cluster_name"]
+    kafka_api_url = f"{BASE_URL}/kafka-ui/api/clusters/{cluster_name}"
 
-        LOGGER.info("Scale %s to 0", service.spec.name)
-        service.scale(0)
-        wait_services_status(mirror_stack, {service.spec.name: "0/0"})
+    def kget(path):
+        url = f"{kafka_api_url}/{path}"
+        resp = requests.get(url)
+        if resp.status_code == 200:
+            return resp.json()
+        resp.raise_for_status()
 
-        # TODO: check there are no error reported in redis after the replayers are done
+    def check_replayer_done(consumer_group):
+        # NOTE: probably need to check each partition, we could reach (?) a
+        # transient situation where the total lag is reported as 0 but there
+        # are missing partitions yet to be consumed from...
+        print(f"Waiting for {consumer_group} to be done...")
+        while True:
+            try:
+                cgroup = kget(f"consumer-groups/{consumer_group}")
+                if cgroup["consumerLag"] == 0:
+                    break
+                print(f"{consumer_group} lag={cgroup['consumerLag']}")
+            except Exception as exc:
+                print("oops", exc)
+            time.sleep(5)
+
+    for grp_ext in (
+        "content",
+        "replayer-directory",
+        "replayer-content",
+        "replayer",
+    ):
+        check_replayer_done(f"{group_prefix}_{grp_ext}")
 
     origins = get(f"{API_URL}/origins/")
     expected_stats = get_expected_stats(group_prefix=mirror_stack._test_group_prefix)

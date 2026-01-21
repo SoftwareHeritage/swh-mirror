@@ -484,7 +484,7 @@ services:
     volumes:
       - redis:/data
 
-  graph-replayer-content:
+  graph-replayer:
     <<: *swh-service
     deploy:
       # do not start replayers by default once the remaining of the stack is
@@ -493,6 +493,36 @@ services:
       # depending on your hardware capabilities; note that there is no need of
       # going above the number of partitions on the kafka cluster (so the 64
       # and 254 upper limits depending on the execution environment).
+      replicas: 0
+    env_file:
+      - ./env/common-python.env
+    environment:
+      STATSD_TAGS: 'role:graph-replayer,hostname:$${HOSTNAME}'
+      SWH_LOG_LEVEL: WARNING
+    configs:
+      - source: graph-replayer
+        target: /etc/softwareheritage/config.yml
+    command:
+      - "graph-replayer"
+      - '--type=origin'
+      - '--type=origin_visit'
+      - '--type=origin_visit_status'
+      - '--type=snapshot'
+      - '--type=revision'
+      - '--type=release'
+      - '--type=skipped_content'
+      - '--type=metadata_authority'
+      - '--type=metadata_fetcher'
+      - '--type=raw_extrinsic_metadata'
+      - '--type=extid'
+    depends_on:
+      - storage
+      - redis
+
+  graph-replayer-content:
+    <<: *swh-service
+    deploy:
+      # see above
       replicas: 0
     env_file:
       - ./env/common-python.env
@@ -525,36 +555,6 @@ services:
     command:
       - "graph-replayer"
       - "--type=directory"
-    depends_on:
-      - storage
-      - redis
-
-  graph-replayer:
-    <<: *swh-service
-    deploy:
-      # see above
-      replicas: 0
-    env_file:
-      - ./env/common-python.env
-    environment:
-      STATSD_TAGS: 'role:graph-replayer,hostname:$${HOSTNAME}'
-      SWH_LOG_LEVEL: WARNING
-    configs:
-      - source: graph-replayer
-        target: /etc/softwareheritage/config.yml
-    command:
-      - "graph-replayer"
-      - '--type=origin'
-      - '--type=origin_visit'
-      - '--type=origin_visit_status'
-      - '--type=snapshot'
-      - '--type=revision'
-      - '--type=release'
-      - '--type=skipped_content'
-      - '--type=metadata_authority'
-      - '--type=metadata_fetcher'
-      - '--type=raw_extrinsic_metadata'
-      - '--type=extid'
     depends_on:
       - storage
       - redis

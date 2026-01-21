@@ -455,8 +455,46 @@ services:
       - '--type=metadata_fetcher'
       - '--type=raw_extrinsic_metadata'
       - '--type=extid'
-      - '--type=content'
-      - '--type=directory'
+    depends_on:
+      - storage
+      - redis
+
+  graph-replayer-content:
+    <<: *swh-service
+    deploy:
+      # see above
+      replicas: 0
+    env_file:
+      - ./env/common-python.env
+    environment:
+      STATSD_TAGS: 'role:graph-replayer,hostname:$${HOSTNAME}'
+      SWH_LOG_LEVEL: WARNING
+    configs:
+      - source: graph-replayer-content
+        target: /etc/softwareheritage/config.yml
+    command:
+      - "graph-replayer"
+      - "--type=content"
+    depends_on:
+      - storage
+      - redis
+
+  graph-replayer-directory:
+    <<: *swh-service
+    deploy:
+      # see above
+      replicas: 0
+    env_file:
+      - ./env/common-python.env
+    environment:
+      STATSD_TAGS: 'role:graph-replayer,hostname:$${HOSTNAME}'
+      SWH_LOG_LEVEL: WARNING
+    configs:
+      - source: graph-replayer-directory
+        target: /etc/softwareheritage/config.yml
+    command:
+      - "graph-replayer"
+      - "--type=directory"
     depends_on:
       - storage
       - redis
@@ -739,6 +777,10 @@ configs:
     file: conf/content-replayer.yml
   graph-replayer:
     file: conf/graph-replayer.yml
+  graph-replayer-content:
+    file: conf/graph-replayer-content.yml
+  graph-replayer-directory:
+    file: conf/graph-replayer-directory.yml
   prometheus:
     file: conf/prometheus.yml
   prometheus-statsd-exporter:
