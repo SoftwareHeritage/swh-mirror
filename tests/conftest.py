@@ -131,6 +131,7 @@ def mirror_stack(request, docker_client, tmp_path_factory, compose_file):
         "group_id": group_prefix,
         "broker": KAFKA_BROKER,
         "objstorage_url": OBJSTORAGE_URL,
+        "cluster_name": "test-mirror-ro",
     }
 
     for conffile in (tmp_path / "conf").glob("*.yml.test"):

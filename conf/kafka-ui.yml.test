@@ -1,7 +1,7 @@
 kafka:
   clusters:
   - bootstrapServers: {broker}
-    name: test-mirror-ro
+    name: {cluster_name}
     properties:
       security.protocol: SASL_SSL
       sasl.mechanism: SCRAM-SHA-512
