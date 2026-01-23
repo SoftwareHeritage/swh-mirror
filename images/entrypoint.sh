@@ -81,7 +81,7 @@ case "$1" in
         fi
 
         if [ "$1" == "search" ]; then
-            ES_HOST=`yq '.search.hosts[0]' $SWH_CONFIG_FILENAME`
+            ES_HOST=`yq '.search.hosts[0]' $SWH_CONFIG_FILENAME | sed -E -s 's|https?://||'`
             echo Waiting for elasticsearch host $ES_HOST
             wait-for-it $ES_HOST -s --timeout=0
         fi
