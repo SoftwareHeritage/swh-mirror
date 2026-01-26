@@ -72,7 +72,7 @@ def is_task_running(task):
     except DockerException as e:
         # A task might already have disappeared before we can get its status.
         # In that case, we know for sure it’s not running.
-        if "No such object" in e.stderr:
+        if "no such object" in e.stderr.lower():
             return False
         else:
             raise
