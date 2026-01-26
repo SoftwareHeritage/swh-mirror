@@ -399,7 +399,17 @@ def test_mirror(
                 break
 
         LOGGER.info("Directory is %s", swhid)
-        cook = post(f"{API_URL}/vault/flat/{swhid}/")
+        cook = None
+        for i in range(3):
+            # for some reason, this sometimes fail with a NotFoundError so give
+            # it a bit of time...
+            try:
+                cook = post(f"{API_URL}/vault/flat/{swhid}/")
+                break
+            except Exception as exc:
+                LOGGER.error(f"Could not start cooking {swhid} ({exc})")
+                time.sleep(2)
+
         assert cook
         assert cook["status"] in ("new", "pending")
         cooks.append((origin["url"], swhid, cook))
@@ -407,7 +417,7 @@ def test_mirror(
     # then wait for successful cooks
     while not all(cook["status"] == "done" for _, _, cook in cooks):
         origin, swhid, cook = cooks.pop(0)
-        cook = get(f"{API_URL}/vault/flat/{swhid}")
+        cook = get(f"{API_URL}/vault/flat/{swhid}/")
         cooks.append((origin, swhid, cook))
     LOGGER.info("All origins have been cooked")
 
