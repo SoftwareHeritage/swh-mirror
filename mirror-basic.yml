@@ -2,7 +2,7 @@
 # deployment stack based on simple local-storage based data backends for both
 # swh-storage (using a postgresql backend) and swh-objstorage (using a
 # pathslicer backend on a docker volume).
-
+# !! WARNING!! This setup is NOT recommended for a production deployment.
 
 x-swh-service: &swh-service
   image: softwareheritage/mirror:${SWH_IMAGE_TAG:-20260122-184240}
@@ -15,6 +15,8 @@ services:
       replicas: 1
 
   kafka-ui:
+    # give a nice UI to follow kafka consumers; also provides simple APIs used
+    # by tests to introspect the kafka consumers' status
     image: ghcr.io/kafbat/kafka-ui
     environment:
       SPRING_CONFIG_ADDITIONAL-LOCATION: /config.yml
@@ -24,7 +26,8 @@ services:
         target: /config.yml
 
   storage-db:
-    # the main storage database
+    # Main storage (swh-storage) database.
+    # ** TO BE MODIFIED **
     image: postgres:16
     deploy:
       # we want only one replica of this service in the whole cluster
@@ -53,7 +56,7 @@ services:
         mode: 0400
 
   masking-proxy-db:
-    # the database for the masking proxy
+    # Database for the masking proxy (see below)
     image: postgres:16
     deploy:
       # we want only one replica of this service in the whole cluster
@@ -82,7 +85,7 @@ services:
         mode: 0400
 
   web-db:
-    # the database for the web application
+    # Database for the web application
     image: postgres:16
     deploy:
       # we want only one replica of this service in the whole cluster
@@ -110,7 +113,11 @@ services:
         mode: 0400
 
   web:
-    # the web app; serves both the web navigation interface and the public web API
+    # The web app (swh-web); serves both the web navigation interface and the
+    # public web API; it is configured with a masking proxy (see below) as
+    # swh-backend; allow to restrict public access to hidden/masked objects
+    # (subject to Take Down Requests) and handle on-the-fly name change
+    # corrections.
     <<: *swh-service
     configs:
       - source: web
@@ -140,6 +147,8 @@ services:
 
   sync-mailmap-cron:
     # cron-like job synchronizing mailmap declarations (web->storage)
+    # Mailmap is the process allowinf to register personal identification
+    # (name, email address) that should not be publicly displayed.
     <<: *swh-service
     # these config files should not be needed for this service, but currently,
     # if missing, the mailmap script fails to load properly...
@@ -180,6 +189,8 @@ services:
         condition: none
 
   swarm-cronjob:
+    # provides a docker-swarm-level cron-job-like feature; use to trigger
+    # regular execution of the sync-mailmap-cron service (see below)
     image: crazymax/swarm-cronjob
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
@@ -221,7 +232,8 @@ services:
     command: ["rpc-server", "objstorage"]
 
   storage:
-    # the swh-storage backend service; using postgresql (storage-db) as backend
+    # the main (read-wrtie) swh-storage backend service; using postgresql
+    # (storage-db) as backend
     <<: *swh-service
     deploy:
       # needed to allow actual and dynammic load balancing
@@ -253,8 +265,9 @@ services:
       - storage-db
 
   storage-public:
-    # the swh-storage public backend service; comes with a masking proxy before
-    # the actual storage allowing to hide objects after a TDN
+    # the (read-oly) swh-storage public backend service; comes with a masking
+    # proxy before the actual storage allowing to hide objects after a TDN and
+    # fix names according to recorded name changes
     <<: *swh-service
     deploy:
       # needed to allow actual and dynammic load balancing
@@ -283,6 +296,11 @@ services:
     command: ["rpc-server", "storage"]
 
   nginx:
+    # The main reverse proxy for all http services accessible from outside the
+    # swarm cluster; serves the main web app, monitoring services (grafana,
+    # prometheus) and several other services useful for investigating issues
+    # etc. These should now be made publicly available. See conf/nginx.conf for
+    # more details.
     image: nginx:1.25
     configs:
       - source: nginx
@@ -296,6 +314,9 @@ services:
     #  mode: global
 
   prometheus:
+    # the backend service for monitoring. This is the main time serties
+    # database used by services to push metrics in (mostly via a statsd
+    # collector, see below).
     image: prom/prometheus:v2.51.2
     depends_on:
     - prometheus-statsd-exporter
@@ -324,6 +345,7 @@ services:
   #     - 9091:9091
 
   prometheus-statsd-exporter:
+    # The statsd->prometheus collector
     image: prom/statsd-exporter:v0.26.1
     command:
       - "--statsd.mapping-config=/etc/prometheus/statsd-mapping.yml"
@@ -332,6 +354,7 @@ services:
         target: /etc/prometheus/statsd-mapping.yml
 
   grafana:
+    # The graphical frontend used to expose prometheus metrics.
     image: grafana/grafana:10.4.2
     deploy:
       # we want only one replica of this service in the whole cluster
@@ -361,7 +384,11 @@ services:
 ## SWH Search services
 
   elasticsearch:
-    # this is really just a minimal setup, not realistic for a production-like
+    # The elasticsearch database used as backend for search capabilities of the
+    # archive.
+    #
+    # ** TO BE MODIFIED **
+    # This is really just a minimal setup, not realistic for a production-like
     # environment
     image: elastic/elasticsearch:7.17.20
     deploy:
@@ -377,6 +404,8 @@ services:
       - elasticsearch-data:/usr/share/elasticsearch/data
 
   search:
+    # The search service (instance of swh-search) used by the main web app
+    # (swh-web). It's a frontend to the elasticsearch above.
     <<: *swh-service
     env_file:
       - ./env/common-python.env
@@ -388,6 +417,8 @@ services:
     command: ["rpc-server", "search"]
 
   search-journal-client-origin:
+    # The replayer service responsible of filling the search service database
+    # (elasticsearch) reading entries from the 'origin' kafka topic.
     <<: *swh-service
     env_file:
       - ./env/common-python.env
@@ -397,6 +428,8 @@ services:
     command: ["search-indexer", "-o", "origin"]
 
   search-journal-client-visit:
+    # The replayer service responsible of filling the search service database
+    # (elasticsearch) reading entries from the 'origin-visit' kafka topic.
     <<: *swh-service
     env_file:
       - ./env/common-python.env
@@ -409,6 +442,8 @@ services:
 ## replayer services
 
   redis:
+    # Simple key-value store used to register replication issues occurring
+    # during the replayer of the storage (swh-storage).
     image: redis:7.2
     deploy:
       # we want only one replica of this service in the whole cluster
@@ -425,6 +460,11 @@ services:
       - redis:/data
 
   graph-replayer:
+    # The kafka replayer service responsible for the replication of the main
+    # storage (swh-storage). This instance is handing all the kafka topics but
+    # 'content' and 'dorectory' (see below). These 2 have dedicated replayer
+    # services because they are significantly bigger than the other topics, and
+    # required special tuning (especially scaling).
     <<: *swh-service
     deploy:
       # do not start replayers by default once the remaining of the stack is
@@ -460,6 +500,8 @@ services:
       - redis
 
   graph-replayer-content:
+    # The kafka replayer service responsible for the replication of the main
+    # storage (swh-storage). This instance is handing only the 'content' topic.
     <<: *swh-service
     deploy:
       # see above
@@ -480,6 +522,8 @@ services:
       - redis
 
   graph-replayer-directory:
+    # The kafka replayer service responsible for the replication of the main
+    # storage (swh-storage). This instance is handing only the 'directory' topic.
     <<: *swh-service
     deploy:
       # see above
@@ -500,6 +544,13 @@ services:
       - redis
 
   content-replayer:
+    # The kafka replayer service responsible for the replication of the object
+    # storage (swh-objstorage). Not to be confused with the
+    # graph-replayer-content; this later fills the storage (swh-storage) with
+    # content *descriptions* (hashes like sha1, sha256 etc, and size of the
+    # content object) while this service is replicating the objects theselves,
+    # copying them from the source objstorage (as configured in
+    # cond/content-replayer.yml) to the local objstorage.
     <<: *swh-service
     deploy:
       # do not start replayers by default; see above
@@ -521,6 +572,8 @@ services:
 ## secondary services
 
   amqp:
+    # used for the scheduling of Celery tasks involved in packing queried
+    # directory or full repository history voa the vault service (see below).
     image: rabbitmq:3.13-management
 
 ### vault services
@@ -554,6 +607,7 @@ services:
         mode: 0400
 
   vault:
+    # The vault service.
     <<: *swh-service
     deploy:
       replicas: 1
@@ -577,6 +631,11 @@ services:
         mode: 0400
 
   vault-worker:
+    # Celery worker dedicated to actually gather of the objects required to
+    # build a (tar) archive for a requested directory (or git history). Since
+    # this can be a very long process, it cannot be handled directly within the
+    # web app; it is the jon of such and asynchronous backend task to do so and
+    # motify the requester (email).
     <<: *swh-service
     deploy:
       replicas: 1
@@ -591,14 +650,16 @@ services:
         target: /etc/softwareheritage/config.yml
     command: celery-worker
 
-  # vault do really need someone to talk to via SMTP
   mailhog:
+    # vault do really need someone to talk to via SMTP, so provide one for
+    # testing purpose. This really need to be replaced by a proper SMTP
+    # configuration for an actual deployment.
     image: mailhog/mailhog
 
 ### scheduler services
 
   scheduler-db:
-    # the database for the vault rpc server
+    # database for the scheduler RPC server
     image: postgres:16
     deploy:
       # we want only one replica of this service in the whole cluster
@@ -626,6 +687,9 @@ services:
         mode: 0400
 
   scheduler:
+    # Scheduler RPC service; used to schedule vault cooking tasks (asynchronous
+    # build tar archive of a Directory or a git-bare file of the git history of
+    # a repository).
     <<: *swh-service
     deploy:
       replicas: 1
@@ -648,6 +712,9 @@ services:
         mode: 0400
 
   scheduler-listener:
+    # Helper service related to the task scheduling facility. This listens to
+    # Celery event to keep the state of tasks on the scheduler database in sync
+    # with their actual execution state.
     <<: *swh-service
     deploy:
       replicas: 1
@@ -670,6 +737,8 @@ services:
         mode: 0400
 
   scheduler-runner:
+    # Helper service related to task scheduling facility. This regularly spawn
+    # new Celery tasks according to scheduling policies.
     <<: *swh-service
     deploy:
       replicas: 1
@@ -693,6 +762,12 @@ services:
 
   ## TDN propagation services
   notification-watcher:
+    # Service dedicated to listen for alterations notififactions sent via a
+    # dedicated kafka topic from the main SWH Archive. For each received
+    # notification message, it will mask all the targeted objects (in the
+    # masking-proxy-db) and send an email to listed operators so thath they can
+    # decide what to do with the alteration request (apply it permanently or
+    # reject it).
     <<: *swh-service
     deploy:
       replicas: 0  # do not start this at first, required for tests
