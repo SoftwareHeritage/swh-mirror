@@ -256,7 +256,7 @@ services:
     volumes:
       - "objstorage:/srv/softwareheritage/winery:rw,Z"
     configs:
-      - source: objstorage
+      - source: objstorage-rw
         target: /etc/softwareheritage/config.yml
     depends_on:
       - winery-db
@@ -281,7 +281,9 @@ services:
     deploy:
       # needed to allow actual and dynamic load balancing
       endpoint_mode: dnsrr
-      # a real life replicas value better be in the 16 to 64 range
+      # ** TO BE MODIFIED **
+      # a real life replicas value better be in the 2 to 8 range
+      # see the comment on GUNICORN_WORKERS below
       replicas: 1
       placement:
         # note: if using a local volume, you need to pin the objstorage
@@ -293,7 +295,7 @@ services:
     volumes:
       - "objstorage:/srv/softwareheritage/winery:rw,Z"
     configs:
-      - source: objstorage
+      - source: objstorage-rw
         target: /etc/softwareheritage/config.yml
     env_file:
       - ./env/common-python.env
@@ -308,12 +310,57 @@ services:
       DB_SKIP_INIT: 1
       # NOT USING gunicorn threads is CRITICAL for winery
       GUNICORN_THREADS: 1
+      # ** TO BE MODIFIED **
       # beware of this: 1 winery objstorage process = 1 active shard
       # so the total number of active shards will be 'replicas x workers'
       GUNICORN_WORKERS: 4
 
     command: ["rpc-server", "objstorage"]
     secrets:
+      - source: swh-mirror-winery-db-password
+        target: postgres-password-swh-winery
+        uid: '1000'
+        mode: 0400
+
+  objstorage-ro:
+    # the read-only swh-objstorage backend service
+    <<: *swh-service
+    deploy:
+      # needed to allow actual and dynamic load balancing
+      endpoint_mode: dnsrr
+      # ** TO BE MODIFIED **
+      # a real life replicas value better be in the 2 to 8 range
+      replicas: 1
+      placement:
+        # note: if using a local volume, you need to pin the objstorage
+        # instances on the node hosting the volume, eg. the manager, otherwise,
+        # if using a remote/distributed objstorage backend (seaweedfs, cloud,
+        # etc.) you want to remove this placement constraint
+        constraints:
+          - node.labels.org.softwareheritage.mirror.volumes.objstorage == true
+    volumes:
+      - "objstorage:/srv/softwareheritage/winery:rw,Z"
+    configs:
+      - source: objstorage-ro
+        target: /etc/softwareheritage/config.yml
+    env_file:
+      - ./env/common-python.env
+    environment:
+      PGCFG_0: swh-winery
+      PGHOST_0: winery-db
+      PGUSER_0: swh
+      POSTGRES_DB_0: swh-winery
+      PORT: "5003"
+      # we want to handle winery db init "by hand" for now, see the
+      # entrypoint.sh script
+      DB_SKIP_INIT: 1
+      # NOT USING gunicorn threads is CRITICAL for winery
+      GUNICORN_THREADS: 1
+      GUNICORN_WORKERS: 4
+
+    command: ["rpc-server", "objstorage"]
+    secrets:
+      # Note: ideally you would use dedicated RO credentials for this service
       - source: swh-mirror-winery-db-password
         target: postgres-password-swh-winery
         uid: '1000'
@@ -905,8 +952,10 @@ configs:
     file: conf/storage-cassandra.yml
   storage-public:
     file: conf/storage-public.yml
-  objstorage:
-    file: conf/objstorage-winery.yml
+  objstorage-ro:
+    file: conf/objstorage-winery-ro.yml
+  objstorage-rw:
+    file: conf/objstorage-winery-rw.yml
   nginx:
     file: conf/nginx.conf
   nginx-robots:

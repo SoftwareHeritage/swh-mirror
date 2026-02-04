@@ -6,4 +6,4 @@ storage:
   auth_provider: null
   objstorage:
     cls: remote
-    url: http://objstorage:5003/
+    url: http://objstorage-ro:5003/

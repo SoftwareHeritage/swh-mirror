@@ -1,0 +1,43 @@
+objstorage:
+  cls: winery
+
+  # boolean (false (default): allow writes, true: only allow reads)
+  readonly: true
+  allow_delete: false
+
+  # Shared database settings
+  database:
+    # string: PostgreSQL connection string for the object index and read-write
+    # shards
+    db: postgresql:///?service=swh-winery
+    # string: PostgreSQL application name for connections (unset by default)
+    application_name: null
+
+  # Shards pool settings
+  shards_pool:
+    ## Settings for the directory shards pool
+    # Shards are stored in `{base_directory}/{pool_name}`
+    type: directory
+
+    # **TO BE MODIFIED**
+    base_directory: /srv/softwareheritage/winery
+    pool_name: shards
+
+  shards:
+    # XXX these are actually not used for a RO objstorage but required in the code...
+    max_size: 100_000_000_000
+    rw_idle_timeout: 300
+
+  # Optional throttler configuration, leave unset to disable throttling
+  throttler:
+    # string: PostgreSQL connection string for the throttler database. Can be
+    # shared with (and defaults to) the main database set in the `database`
+    # section. Must be read-write even for readonly instances.
+    db: postgresql:///?service=swh-winery
+    # integer: max read bytes per second
+    max_read_bps: 100_000_000
+    # integer: max write bytes per second
+    max_write_bps: 100_000_000
+
+
+client_max_size: 1073741824
