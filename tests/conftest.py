@@ -8,7 +8,9 @@ from os import chdir, environ
 from pathlib import Path
 import re
 from shutil import copy, copytree
+import socket
 from time import monotonic, sleep
+from urllib.parse import urlparse
 from uuid import uuid4
 
 from confluent_kafka.admin import AdminClient
@@ -22,8 +24,13 @@ KAFKA_USERNAME = environ["SWH_MIRROR_TEST_KAFKA_USERNAME"]
 KAFKA_PASSWORD = environ["SWH_MIRROR_TEST_KAFKA_PASSWORD"]
 KAFKA_BROKER = environ["SWH_MIRROR_TEST_KAFKA_BROKER"]
 OBJSTORAGE_URL = environ["SWH_MIRROR_TEST_OBJSTORAGE_URL"]
-BASE_URL = environ.get("SWH_MIRROR_TEST_BASE_URL", "http://127.0.0.1:5081")
-API_URL = environ.get("SWH_MIRROR_TEST_API_URL", f"{BASE_URL}/api/1")
+# We really need to be able to define the base URL on jenkins via env vars
+# (because tests are executed on a docker-in-docker scaffolding) This is used
+# only to retrieve the netloc of the URL to use as entrypoint for API
+# queries...
+# By default, do NOT specify the port, it will be randomly chosen...
+BASE_URL = environ.get("SWH_MIRROR_TEST_BASE_URL", "http://127.0.0.1")
+
 WFI_TIMEOUT = 60
 
 LOGGER = logging.getLogger(__name__)
@@ -117,7 +124,47 @@ def compose_file():
 
 
 @pytest.fixture(scope="module")
-def mirror_stack(request, docker_client, tmp_path_factory, compose_file):
+def base_url():
+    urlp = urlparse(BASE_URL)
+    port = urlp.port
+    hostname = urlp.hostname
+    scheme = urlp.scheme or "http"
+
+    # if not given (via the env var), select a free port for the nginx service
+    # not very atomic but should be good enough...
+    if port is None:
+        sock = socket.socket()
+        sock.bind(("", 0))
+        port = sock.getsockname()[1]
+        sock.close()
+    # set the SWH_PORT env var; it's being used the compose file...
+    environ["SWH_PORT"] = str(port)
+    url = f"{scheme}://{hostname}:{port}"
+    LOGGER.info(f"Using base url {url}")
+    return url
+
+
+@pytest.fixture(scope="module")
+def api_url(base_url):
+    return f"{base_url}/api/1"
+
+
+@pytest.fixture(scope="module")
+def http_session(base_url):
+    session = requests.Session()
+    adapter = requests.adapters.HTTPAdapter(
+        max_retries=3,
+        pool_connections=5,
+        pool_maxsize=10,
+    )
+    session.mount(base_url, adapter)
+    return session
+
+
+@pytest.fixture(scope="module")
+def mirror_stack(
+    request, docker_client, tmp_path_factory, compose_file, base_url, api_url
+):
     # copy all the stack config files in a tmp directory to be able to resolve
     # templated config files, aka. all the `conf/xxx.yml.test` are processed to
     # generate the corresponding `conf/xxx.yml` file (to inject kafka config
@@ -187,9 +234,9 @@ def mirror_stack(request, docker_client, tmp_path_factory, compose_file):
         got_exception = False
         # for the sake of early checks...
         LOGGER.info("Sanity checks:")
-        wait_for_it(BASE_URL)
-        wait_for_it(f"{API_URL}/")
-        wait_for_it(f"{BASE_URL}/mail/api/v2/messages")
+        wait_for_it(base_url)
+        wait_for_it(f"{api_url}/")
+        wait_for_it(f"{base_url}/mail/api/v2/messages")
         yield docker_stack
     except Exception:
         got_exception = True

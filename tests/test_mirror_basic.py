@@ -18,26 +18,12 @@ from python_on_whales import DockerException
 import requests
 from swh.storage import get_storage
 
-from .conftest import (
-    API_URL,
-    BASE_URL,
-    KAFKA_BROKER,
-    KAFKA_PASSWORD,
-    KAFKA_USERNAME,
-    LOGGER,
-)
+from .conftest import KAFKA_BROKER, KAFKA_PASSWORD, KAFKA_USERNAME, LOGGER
 
 SCALE = 2
-session = requests.Session()
-adapter = requests.adapters.HTTPAdapter(
-    max_retries=3,
-    pool_connections=5,
-    pool_maxsize=10,
-)
-session.mount(BASE_URL, adapter)
 
 
-def get(url):
+def get(session, url):
     resp = session.get(url)
     resp.raise_for_status()
     if resp.headers["content-type"].lower() in ("application/json", "text/json"):
@@ -47,7 +33,7 @@ def get(url):
     return result
 
 
-def post(url):
+def post(session, url):
     resp = session.post(url)
     assert resp.status_code in (200, 201, 202)
     if resp.headers["content-type"].lower() == "application/json":
@@ -132,7 +118,7 @@ def wait_for_log_entry(
             break
 
 
-def get_stats_from_storage(url):
+def get_stats_from_storage(url, base_url):
 
     from swh.model.model import ReleaseTargetType, SnapshotTargetType
     import swh.storage.algos.dir_iterators as algo_DI
@@ -142,7 +128,7 @@ def get_stats_from_storage(url):
 
     storage = get_storage(
         cls="remote",
-        url=f"{BASE_URL}/storage-public",
+        url=f"{base_url}/storage-public",
         max_retries=5,
         pool_connections=10,
         pool_maxsize=20,
@@ -290,7 +276,14 @@ def get_expected_stats(group_prefix):
 
 
 def test_mirror(
-    request, docker_client, mirror_stack, initial_services, replayer_services
+    request,
+    docker_client,
+    mirror_stack,
+    initial_services,
+    replayer_services,
+    base_url,
+    api_url,
+    http_session,
 ):
     initial_services_status = {
         k.format(mirror_stack.name): v for k, v in initial_services.items()
@@ -298,7 +291,7 @@ def test_mirror(
     wait_services_status(mirror_stack, initial_services_status)
 
     # ensure we have a robots.txt served
-    robots = get(f"{BASE_URL}/robots.txt")
+    robots = get(http_session, f"{base_url}/robots.txt")
     assert robots.startswith(b"User-agent:")
     assert b"GPTBot" in robots
 
@@ -317,14 +310,7 @@ def test_mirror(
 
     group_prefix = mirror_stack._test_conf_template["group_id"]
     cluster_name = mirror_stack._test_conf_template["cluster_name"]
-    kafka_api_url = f"{BASE_URL}/kafka-ui/api/clusters/{cluster_name}"
-
-    def kget(path):
-        url = f"{kafka_api_url}/{path}"
-        resp = requests.get(url)
-        if resp.status_code == 200:
-            return resp.json()
-        resp.raise_for_status()
+    kafka_api_url = f"{base_url}/kafka-ui/api/clusters/{cluster_name}"
 
     def check_replayer_done(consumer_group):
         # NOTE: probably need to check each partition, we could reach (?) a
@@ -333,7 +319,9 @@ def test_mirror(
         print(f"Waiting for {consumer_group} to be done...")
         while True:
             try:
-                cgroup = kget(f"consumer-groups/{consumer_group}")
+                cgroup = get(
+                    http_session, f"{kafka_api_url}/consumer-groups/{consumer_group}"
+                )
                 if cgroup["consumerLag"] == 0:
                     break
                 print(f"{consumer_group} lag={cgroup['consumerLag']}")
@@ -349,7 +337,7 @@ def test_mirror(
     ):
         check_replayer_done(f"{group_prefix}_{grp_ext}")
 
-    origins = get(f"{API_URL}/origins/")
+    origins = get(http_session, f"{api_url}/origins/")
     expected_stats = get_expected_stats(group_prefix=mirror_stack._test_group_prefix)
     # only check the complete replication when asked for (this is slow)
     if request.config.getoption("full_check"):
@@ -363,7 +351,7 @@ def test_mirror(
         for origin, expected in expected_stats.items():
             assert origin == expected["origin"]
             t0 = time.monotonic()
-            origin_stats = get_stats_from_storage(origin)
+            origin_stats = get_stats_from_storage(origin, base_url)
             LOGGER.info("%s", origin_stats)
             LOGGER.info("took %.2fs", time.monotonic() - t0)
             assert origin_stats == expected
@@ -376,10 +364,11 @@ def test_mirror(
     for origin in origins:
         LOGGER.info("Cook HEAD for %s", origin["url"])
         visit = get(
-            f"{API_URL}/origin/{origin['url']}/visit/latest/?require_snapshot=true"
+            http_session,
+            f"{api_url}/origin/{origin['url']}/visit/latest/?require_snapshot=true",
         )
         assert visit
-        snp = get(visit["snapshot_url"])
+        snp = get(http_session, visit["snapshot_url"])
         assert snp
         branches = snp.get("branches", {})
         head = branches.get("HEAD")
@@ -389,12 +378,12 @@ def test_mirror(
             if head["target_type"] == "alias":
                 head = branches[head["target"]]
             elif head["target_type"] == "release":
-                head = get(head["target_url"])
+                head = get(http_session, head["target_url"])
             elif head["target_type"] == "directory":
                 swhid = f"swh:1:dir:{head['target']}"
                 break
             elif head["target_type"] == "revision":
-                rev = get(head["target_url"])
+                rev = get(http_session, head["target_url"])
                 swhid = f"swh:1:dir:{rev['directory']}"
                 break
 
@@ -404,7 +393,7 @@ def test_mirror(
             # for some reason, this sometimes fail with a NotFoundError so give
             # it a bit of time...
             try:
-                cook = post(f"{API_URL}/vault/flat/{swhid}/")
+                cook = post(http_session, f"{api_url}/vault/flat/{swhid}/")
                 break
             except Exception as exc:
                 LOGGER.error(f"Could not start cooking {swhid} ({exc})")
@@ -417,7 +406,7 @@ def test_mirror(
     # then wait for successful cooks
     while not all(cook["status"] == "done" for _, _, cook in cooks):
         origin, swhid, cook = cooks.pop(0)
-        cook = get(f"{API_URL}/vault/flat/{swhid}/")
+        cook = get(http_session, f"{api_url}/vault/flat/{swhid}/")
         cooks.append((origin, swhid, cook))
     LOGGER.info("All origins have been cooked")
 
@@ -426,23 +415,23 @@ def test_mirror(
         LOGGER.info(f"Validating cooked directory for {origin} ({swhid})")
         assert cook["status"] == "done"
         # so we can download it
-        tarfilecontent = get(cook["fetch_url"])
+        tarfilecontent = get(http_session, cook["fetch_url"])
         assert isinstance(tarfilecontent, bytes)
         tarfileobj = tarfile.open(fileobj=BytesIO(tarfilecontent))
         filelist = tarfileobj.getnames()
         assert all(fname.startswith(swhid) for fname in filelist)
         for path in filelist[1:]:
             tarinfo = tarfileobj.getmember(path)
-            url = f"{API_URL}/directory/{quote(path[10:])}/"
-            expected = get(url)  # remove the 'swh:1:dir:' part
+            url = f"{api_url}/directory/{quote(path[10:])}/"
+            expected = get(http_session, url)  # remove the 'swh:1:dir:' part
             LOGGER.debug("Retrieved from storage: %s → %s", url, expected)
             if expected["type"] == "dir":
                 assert tarinfo.isdir()
             elif expected["type"] == "file":
                 if expected["perms"] == 0o120000:
                     assert tarinfo.issym()
-                    tgt = get(expected["target_url"])
-                    symlnk = get(tgt["data_url"])
+                    tgt = get(http_session, expected["target_url"])
+                    symlnk = get(http_session, tgt["data_url"])
                     assert symlnk == tarinfo.linkpath.encode()
                 else:
                     assert tarinfo.isfile()
@@ -475,7 +464,7 @@ def test_mirror(
     # check the notification email has been sent
     LOGGER.info("Checking expected email message has been sent")
     for i in range(10):
-        messages = get(f"{BASE_URL}/mail/api/v2/messages")
+        messages = get(http_session, f"{base_url}/mail/api/v2/messages")
         if messages["count"] >= 1:
             break
         time.sleep(1)
@@ -491,13 +480,13 @@ def test_mirror(
     origin = "https://github.com/SoftwareHeritage/swh-core"
     LOGGER.info(f"Checking swh-core github origin has been masked ({origin})")
     with pytest.raises(requests.HTTPError) as exc:
-        get(f"{API_URL}/origin/{origin}/visit/latest/")
+        get(http_session, f"{api_url}/origin/{origin}/visit/latest/")
     assert exc.value.response.status_code == 403
 
     # check that the swh.core pypi package remains OK
     origin = "https://pypi.org/project/swh.core/"
     LOGGER.info(f"Checking swh-core pypi origin is still available ({origin})")
-    origin_stats = get_stats_from_storage(origin)
+    origin_stats = get_stats_from_storage(origin, base_url)
     assert origin_stats == expected_stats[origin]
 
     # TODO: respawn a pair of vault cooking to check both origins are handled

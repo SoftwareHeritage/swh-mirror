@@ -388,7 +388,7 @@ services:
       - source: nginx-robots
         target: /usr/share/nginx/html/robots.txt
     ports:
-      - "5081:5081/tcp"
+      - "${SWH_PORT:-5081}:5081/tcp"
     # an actual deployment would probably set this:
     #deploy:
     #  mode: global
