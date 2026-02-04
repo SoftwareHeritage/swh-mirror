@@ -220,6 +220,18 @@ def mirror_stack(
         "SWH_IMAGE_TAG",
         default_image_tag.group("tag") if default_image_tag else "unknown",
     )
+    # look for an available Subnet for the IPAM...
+    nets = docker_client.network.list(filters={"driver": "overlay", "scope": "swarm"})
+    subnets = [
+        net.ipam.config[0]["Subnet"]
+        for net in nets
+        if net.exists() and net.name.startswith("swhtest")
+    ]
+    subnets.append("10.0.0.0/16")
+    subnet_val = max(int(sn.split(".")[1]) for sn in subnets) + 1
+    subnet = f"10.{subnet_val}.0.0/16"
+    LOGGER.info(f"Using subnet {subnet} for the swarm network IPAM config")
+    environ["SWH_SUBNET"] = subnet
 
     LOGGER.info(
         "Deploy docker stack %s from %s with SWH_IMAGE_TAG %s",
