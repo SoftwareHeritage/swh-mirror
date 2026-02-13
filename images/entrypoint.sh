@@ -188,6 +188,7 @@ if not User.objects.filter(username = username).exists():
                 --threads 2 \
                 --workers 2 \
                 --timeout 3600 \
+                --log-level ${LOG_LEVEL:-INFO} \
                 --access-logfile '-' \
                 --config 'python:swh.web.gunicorn_config' \
                 --statsd-host=prometheus-statsd-exporter:9125 \
