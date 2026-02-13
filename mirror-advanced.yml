@@ -4,7 +4,7 @@
 
 
 x-swh-service: &swh-service
-  image: softwareheritage/mirror:${SWH_IMAGE_TAG:-20260122-184240}
+  image: softwareheritage/mirror:${SWH_IMAGE_TAG:-20260213-104116}
 
 services:
   memcache:
