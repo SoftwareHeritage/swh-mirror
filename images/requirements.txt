@@ -13,6 +13,6 @@ swh-scheduler[journal]
 swh-scrubber
 swh-search
 swh-vault[graph]
-swh-web
+swh-web >= 0.17.1
 # ensure we don't use the pure python psycopg
 psycopg[c]
