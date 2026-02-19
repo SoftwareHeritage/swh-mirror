@@ -444,7 +444,7 @@ services:
     # the backend service for monitoring. This is the main time serties
     # database used by services to push metrics in (mostly via a statsd
     # collector, see below).
-    image: prom/prometheus:v2.51.2
+    image: prom/prometheus:v3.5.1
     depends_on:
     - prometheus-statsd-exporter
     command:
