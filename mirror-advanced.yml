@@ -451,6 +451,7 @@ services:
       # Needed for the reverse-proxy
       - "--web.external-url=/prometheus"
       - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=3w"
     configs:
       - source: prometheus
         target: /etc/prometheus/prometheus.yml
