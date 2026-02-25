@@ -273,7 +273,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(swh_objstorage_request_duration_seconds_sum{endpoint=\"contains\"}[$interval]) / rate(swh_objstorage_request_duration_seconds_count{endpoint=\"contains\"}[$interval])",
+          "expr": "rate(swh_objstorage_request_duration_seconds_sum{endpoint=\"__contains__\"}[$interval]) / rate(swh_objstorage_request_duration_seconds_count{endpoint=\"__contains__\"}[$interval])",
           "hide": true,
           "interval": "",
           "legendFormat": "mean",
@@ -281,7 +281,7 @@
         },
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.25, rate(swh_objstorage_request_duration_seconds_bucket{endpoint=\"contains\"}[$interval]))",
+          "expr": "histogram_quantile(0.25, rate(swh_objstorage_request_duration_seconds_bucket{endpoint=\"__contains__\"}[$interval]))",
           "hide": false,
           "interval": "",
           "legendFormat": "25%",
@@ -289,7 +289,7 @@
         },
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.75, rate(swh_objstorage_request_duration_seconds_bucket{endpoint=\"contains\"}[$interval]))",
+          "expr": "histogram_quantile(0.75, rate(swh_objstorage_request_duration_seconds_bucket{endpoint=\"__contains__\"}[$interval]))",
           "hide": false,
           "interval": "",
           "legendFormat": "75%",
@@ -297,7 +297,7 @@
         },
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.5, rate(swh_objstorage_request_duration_seconds_bucket{endpoint=\"contains\"}[$interval]))",
+          "expr": "histogram_quantile(0.5, rate(swh_objstorage_request_duration_seconds_bucket{endpoint=\"__contains__\"}[$interval]))",
           "hide": false,
           "interval": "",
           "legendFormat": "50%",
