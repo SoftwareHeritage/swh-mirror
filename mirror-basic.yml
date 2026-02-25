@@ -560,7 +560,7 @@ services:
       - ./env/common-python.env
     environment:
       STATSD_TAGS: 'role:content-replayer,hostname:$${X_NODE_HOSTNAME}'
-      SWH_LOG_LEVEL: 'INFO azure:ERROR'
+      SWH_LOG_LEVEL: 'INFO'
     configs:
       - source: content-replayer
         target: /etc/softwareheritage/config.yml
