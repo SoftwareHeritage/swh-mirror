@@ -469,7 +469,7 @@ services:
       # and 254 upper limits depending on the execution environment).
       replicas: 0
     environment:
-      STATSD_TAGS: 'role:graph-replayer,hostname:$${HOSTNAME}'
+      STATSD_TAGS: 'role:graph-replayer,hostname:$${X_NODE_HOSTNAME},nodename:$${HOSTNAME}'
       SWH_LOG_LEVEL: WARNING
     configs:
       - source: graph-replayer
@@ -499,7 +499,7 @@ services:
       # see above
       replicas: 0
     environment:
-      STATSD_TAGS: 'role:graph-replayer,hostname:$${HOSTNAME}'
+      STATSD_TAGS: 'role:graph-replayer,hostname:$${X_NODE_HOSTNAME},nodename:$${HOSTNAME}'
       SWH_LOG_LEVEL: WARNING
     configs:
       - source: graph-replayer-content
@@ -519,7 +519,7 @@ services:
       # see above
       replicas: 0
     environment:
-      STATSD_TAGS: 'role:graph-replayer,hostname:$${HOSTNAME}'
+      STATSD_TAGS: 'role:graph-replayer,hostname:$${X_NODE_HOSTNAME},nodename:$${HOSTNAME}'
       SWH_LOG_LEVEL: WARNING
     configs:
       - source: graph-replayer-directory
@@ -544,7 +544,7 @@ services:
       # do not start replayers by default; see above
       replicas: 0
     environment:
-      STATSD_TAGS: 'role:content-replayer,hostname:$${X_NODE_HOSTNAME}'
+      STATSD_TAGS: 'role:content-replayer,hostname:$${X_NODE_HOSTNAME},nodename:$${HOSTNAME}'
       SWH_LOG_LEVEL: 'INFO'
     configs:
       - source: content-replayer
