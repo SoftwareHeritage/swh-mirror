@@ -6,6 +6,9 @@
 
 x-swh-service: &swh-service
   image: softwareheritage/mirror:${SWH_IMAGE_TAG:-20260227-150657}
+  env_file:
+    - ./env/common.env
+    - ./env/common-python.env
 
 services:
   memcache:
@@ -225,8 +228,6 @@ services:
     configs:
       - source: objstorage
         target: /etc/softwareheritage/config.yml
-    env_file:
-      - ./env/common-python.env
     environment:
       PORT: "5003"
     command: ["rpc-server", "objstorage"]
@@ -253,8 +254,6 @@ services:
       POSTGRES_DB_0: swh-storage
       DB_FLAVOR: mirror
       PORT: "5002"
-    env_file:
-      - ./env/common-python.env
     secrets:
       - source: swh-mirror-storage-db-password
         target: postgres-password-swh-storage
@@ -286,8 +285,6 @@ services:
       PGUSER_0: swh
       POSTGRES_DB_0: swh-masking-proxy
       PORT: "5002"
-    env_file:
-      - ./env/common-python.env
     secrets:
       - source: swh-mirror-masking-proxy-db-password
         target: postgres-password-swh-masking-proxy
@@ -410,8 +407,6 @@ services:
     # The search service (instance of swh-search) used by the main web app
     # (swh-web). It's a frontend to the elasticsearch above.
     <<: *swh-service
-    env_file:
-      - ./env/common-python.env
     environment:
       PORT: 5010
     configs:
@@ -423,8 +418,6 @@ services:
     # The replayer service responsible of filling the search service database
     # (elasticsearch) reading entries from the 'origin' kafka topic.
     <<: *swh-service
-    env_file:
-      - ./env/common-python.env
     configs:
       - source: search-journal-client
         target: /etc/softwareheritage/config.yml
@@ -434,8 +427,6 @@ services:
     # The replayer service responsible of filling the search service database
     # (elasticsearch) reading entries from the 'origin-visit' kafka topic.
     <<: *swh-service
-    env_file:
-      - ./env/common-python.env
     configs:
       - source: search-journal-client
         target: /etc/softwareheritage/config.yml
@@ -477,8 +468,6 @@ services:
       # going above the number of partitions on the kafka cluster (so the 64
       # and 254 upper limits depending on the execution environment).
       replicas: 0
-    env_file:
-      - ./env/common-python.env
     environment:
       STATSD_TAGS: 'role:graph-replayer,hostname:$${HOSTNAME}'
       SWH_LOG_LEVEL: WARNING
@@ -509,8 +498,6 @@ services:
     deploy:
       # see above
       replicas: 0
-    env_file:
-      - ./env/common-python.env
     environment:
       STATSD_TAGS: 'role:graph-replayer,hostname:$${HOSTNAME}'
       SWH_LOG_LEVEL: WARNING
@@ -531,8 +518,6 @@ services:
     deploy:
       # see above
       replicas: 0
-    env_file:
-      - ./env/common-python.env
     environment:
       STATSD_TAGS: 'role:graph-replayer,hostname:$${HOSTNAME}'
       SWH_LOG_LEVEL: WARNING
@@ -558,8 +543,6 @@ services:
     deploy:
       # do not start replayers by default; see above
       replicas: 0
-    env_file:
-      - ./env/common-python.env
     environment:
       STATSD_TAGS: 'role:content-replayer,hostname:$${X_NODE_HOSTNAME}'
       SWH_LOG_LEVEL: 'INFO'
@@ -614,8 +597,6 @@ services:
     <<: *swh-service
     deploy:
       replicas: 1
-    env_file:
-      - ./env/common-python.env
     configs:
       - source: vault
         target: /etc/softwareheritage/config.yml
@@ -642,12 +623,12 @@ services:
     <<: *swh-service
     deploy:
       replicas: 1
-    env_file:
-      - ./env/common-python.env
-      - ./env/celery-worker.env
     environment:
       SWH_WORKER_INSTANCE: vault
       SWH_LOG_LEVEL: INFO
+      SWH_SCHEDULER_INSTANCE: http://scheduler:5008
+      MAX_TASKS_PER_CHILD: 10
+      CONCURRENCY: 1
     configs:
       - source: vault-worker
         target: /etc/softwareheritage/config.yml
@@ -699,8 +680,6 @@ services:
     configs:
       - source: scheduler
         target: /etc/softwareheritage/config.yml
-    env_file:
-      - ./env/common-python.env
     environment:
       PGCFG_0: swh-scheduler
       PGHOST_0: scheduler-db
@@ -724,8 +703,6 @@ services:
     configs:
       - source: scheduler
         target: /etc/softwareheritage/config.yml
-    env_file:
-      - ./env/common-python.env
     environment:
       SWH_WORKER_INSTANCE: scheduler
       PGCFG_0: swh-scheduler
@@ -748,8 +725,6 @@ services:
     configs:
       - source: scheduler
         target: /etc/softwareheritage/config.yml
-    env_file:
-      - ./env/common-python.env
     environment:
       SWH_WORKER_INSTANCE: scheduler
       PGCFG_0: swh-scheduler
@@ -777,8 +752,6 @@ services:
     configs:
       - source: alter
         target: /etc/softwareheritage/config.yml
-    env_file:
-      - ./env/common-python.env
     environment:
       SWH_LOG_LEVEL: DEBUG
       PGCFG_0: swh-masking-proxy
