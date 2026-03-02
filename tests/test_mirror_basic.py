@@ -65,7 +65,10 @@ def is_task_running(task):
 
 
 def wait_services_status(stack, target_status: Dict[str, str]):
-    LOGGER.info("Waiting for services %s", target_status)
+    LOGGER.info(
+        "Waiting for services:\n%s",
+        "\n".join(f"{k}: {v}" for k, v in target_status.items()),
+    )
     last_changed_status: Dict[str, str] = {}
     while True:
         services = [
@@ -86,8 +89,10 @@ def wait_services_status(stack, target_status: Dict[str, str]):
             break
         if status != last_changed_status:
             LOGGER.info(
-                "Not yet there %s",
-                {k: v for k, v in status.items() if target_status.get(k) != v},
+                "Not yet there:\n%s",
+                "\n".join(
+                    f"{k}: {v}" for k, v in status.items() if target_status.get(k) != v
+                ),
             )
             last_changed_status = status
         time.sleep(1)
@@ -97,6 +102,9 @@ def wait_services_status(stack, target_status: Dict[str, str]):
 def wait_for_log_entry(
     docker_client, service, log_entry, occurrences=1, with_stderr=False
 ):
+    LOGGER.info(
+        'Waiting for %s: %s occurrences of "%s")', service, occurrences, log_entry
+    )
     count = 0
     for stream_type, stream_content in docker_client.service.logs(
         service, follow=True, stream=True
@@ -233,7 +241,7 @@ def get_expected_stats(group_prefix):
     partitions = set()
 
     def on_assign(cons, parts):
-        LOGGER.info("assignment %s", parts)
+        LOGGER.debug("assignment %s", parts)
         for p in parts:
             partitions.add(p.partition)
 
@@ -316,7 +324,7 @@ def test_mirror(
         # NOTE: probably need to check each partition, we could reach (?) a
         # transient situation where the total lag is reported as 0 but there
         # are missing partitions yet to be consumed from...
-        print(f"Waiting for {consumer_group} to be done...")
+        LOGGER.info("Waiting for %s to be done...", consumer_group)
 
         # retrieve the number of partitions for each topic
         parts_per_topic = {
@@ -349,9 +357,17 @@ def test_mirror(
                     [n_parts[topic] == parts_per_topic[topic] for topic in n_parts]
                 ):
                     break
-                print(f"{consumer_group} lag={lag}")
+                LOGGER.info(
+                    "%s lag=%s partitions:\n%s",
+                    consumer_group,
+                    lag,
+                    "\n".join(
+                        "  %s: %s/%s" % (topic, n_parts[topic], parts_per_topic[topic])
+                        for topic in sorted(n_parts)
+                    ),
+                )
             except Exception as exc:
-                print("oops", exc)
+                LOGGER.warning("Unexpected error: %s", exc)
             time.sleep(5)
 
     for grp_ext in (
