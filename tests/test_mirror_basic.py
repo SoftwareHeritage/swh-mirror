@@ -317,14 +317,39 @@ def test_mirror(
         # transient situation where the total lag is reported as 0 but there
         # are missing partitions yet to be consumed from...
         print(f"Waiting for {consumer_group} to be done...")
+
+        # retrieve the number of partitions for each topic
+        parts_per_topic = {
+            topic["name"]: len(
+                [
+                    x
+                    for x in topic["partitions"]
+                    if ((x["offsetMax"] or 0) - (x["offsetMin"] or 0)) > 0
+                ]
+            )
+            for topic in get(http_session, f"{kafka_api_url}/topics")["topics"]
+        }
+
         while True:
             try:
                 cgroup = get(
                     http_session, f"{kafka_api_url}/consumer-groups/{consumer_group}"
                 )
-                if cgroup["consumerLag"] == 0:
+                lag = cgroup["consumerLag"]
+                n_parts = {}
+                # check that for all consumed topics, all partitions have been
+                # assigned and the lag is 0
+                for partition in cgroup["partitions"]:
+                    topic = partition["topic"]
+                    if topic not in n_parts:
+                        n_parts[topic] = 0
+                    if partition["consumerLag"] is not None:
+                        n_parts[topic] += 1
+                if lag == 0 and all(
+                    [n_parts[topic] == parts_per_topic[topic] for topic in n_parts]
+                ):
                     break
-                print(f"{consumer_group} lag={cgroup['consumerLag']}")
+                print(f"{consumer_group} lag={lag}")
             except Exception as exc:
                 print("oops", exc)
             time.sleep(5)
