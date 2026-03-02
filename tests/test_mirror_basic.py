@@ -300,7 +300,7 @@ def test_mirror(
     for service_name in replayer_services:
         service = docker_client.service.inspect(f"{mirror_stack}_{service_name}")
         LOGGER.info("Scale %s to %d", service.spec.name, SCALE)
-        service.scale(SCALE)
+        service.scale(SCALE, detach=True)
         wait_for_log_entry(
             docker_client,
             service,
@@ -471,7 +471,7 @@ def test_mirror(
     # test the TDN handling
     service = docker_client.service.inspect(f"{mirror_stack}_notification-watcher")
     LOGGER.info("Scale %s to %d", service.spec.name, 1)
-    service.scale(1)
+    service.scale(1, detach=True)
 
     removal_id = "test_removal_swh_core"
     LOGGER.info("Scaled %s to %d", service.spec.name, 1)
