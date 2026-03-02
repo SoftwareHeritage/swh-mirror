@@ -4,7 +4,7 @@
 
 
 x-swh-service: &swh-service
-  image: softwareheritage/mirror:${SWH_IMAGE_TAG:-20260213-104116}
+  image: softwareheritage/mirror:${SWH_IMAGE_TAG:-20260227-150657}
 
 services:
   memcache:
@@ -504,6 +504,8 @@ services:
         target: /var/lib/grafana/dashboards/backend-stats.json
       - source: grafana-dashboards-content-replayer
         target: /var/lib/grafana/dashboards/content-replayer.json
+      - source: grafana-dashboards-content-replayer-advanced
+        target: /var/lib/grafana/dashboards/content-replayer-advanced.json
       - source: grafana-dashboards-graph-replayer
         target: /var/lib/grafana/dashboards/graph-replayer.json
     volumes:
@@ -999,6 +1001,8 @@ configs:
     file: conf/grafana/dashboards/graph-replayer.json
   grafana-dashboards-content-replayer:
     file: conf/grafana/dashboards/content-replayer.json
+  grafana-dashboards-content-replayer-advanced:
+    file: conf/grafana/dashboards/content-replayer-advanced.json
   grafana-dashboards-backend-stats:
     file: conf/grafana/dashboards/backend-stats.json
   kafka-ui:
