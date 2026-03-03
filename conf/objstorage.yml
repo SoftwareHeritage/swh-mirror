@@ -1,6 +1,7 @@
 objstorage:
   cls: pathslicing
   slicing: 0:2/2:4
+  compression: gzip
 
   # **TO BE MODIFIED**
   root: /srv/softwareheritage/objects
