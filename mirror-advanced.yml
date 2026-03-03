@@ -476,7 +476,7 @@ services:
 
   grafana:
     # The graphical frontend used to expose prometheus metrics.
-    image: grafana/grafana:10.4.2
+    image: grafana/grafana:12.3
     deploy:
       # we want only one replica of this service in the whole cluster
       replicas: 1
