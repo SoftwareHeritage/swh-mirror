@@ -444,11 +444,13 @@ def test_mirror(
         assert cook["status"] in ("new", "pending")
         cooks.append((origin["url"], swhid, cook))
 
+    LOGGER.info("Waiting for origins to be cooked...")
     # then wait for successful cooks
     while not all(cook["status"] == "done" for _, _, cook in cooks):
         origin, swhid, cook = cooks.pop(0)
         cook = get(http_session, f"{api_url}/vault/flat/{swhid}/")
         cooks.append((origin, swhid, cook))
+        time.sleep(1)
     LOGGER.info("All origins have been cooked")
 
     # should all be in "done" status
