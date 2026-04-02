@@ -83,7 +83,7 @@ ENV PATH="/srv/softwareheritage/venv/bin:${PATH}"
 RUN --mount=type=cache,mode=0755,uid=1000,gid=1000,target=/srv/softwareheritage/.cache/pip \
    pip install --upgrade pip setuptools wheel
 RUN --mount=type=cache,mode=0755,uid=1000,gid=1000,target=/srv/softwareheritage/.cache/pip \
-   pip install gunicorn httpie
+   pip install gunicorn httpie python-json-logger
 
 COPY requirements.txt /srv/softwareheritage/requirements.txt
 
@@ -108,7 +108,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
   apt-get install -y \
     apt-transport-https \
     curl \
-	gnupg \
+    gnupg \
     lsb-release \
     wait-for-it
 

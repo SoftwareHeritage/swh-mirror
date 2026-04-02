@@ -1,0 +1,60 @@
+{
+    "disable_existing_loggers": true,
+    "filters": {
+        "throttle_accesslog": {
+            "()": "swh.objstorage.backends.winery.gunicorn.ThrottledAccessLog",
+            "interval": 60,
+            "status_codes": [
+                200,
+                400
+            ]
+        }
+    },
+    "formatters": {
+        "default": {
+            "class": "pythonjsonlogger.jsonlogger.JsonFormatter",
+            "format": "[%(asctime)s: %(levelname)s/%(processName)s-%(process)d %(threadName)s(%(pathname)s:%(lineno)s:%(funcName)s)]%(name)s %(message)s"
+        }
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "default",
+            "level": "DEBUG",
+            "stream": "ext://sys.stdout"
+        }
+    },
+    "loggers": {
+        "gunicorn": {
+            "level": "INFO"
+        },
+        "gunicorn.access": {
+            "filters": [
+                "throttle_accesslog"
+            ],
+            "handlers": [
+                "console"
+            ],
+            "level": "INFO"
+        },
+        "gunicorn.error": {
+            "level": "INFO"
+        },
+        "swh": {
+            "level": "INFO"
+        },
+        "swh.core.statsd": {
+            "level": "INFO"
+        },
+        "swh.objstorage.backends.winery": {
+            "level": "INFO"
+        }
+    },
+    "root": {
+        "handlers": [
+            "console"
+        ],
+        "level": "DEBUG"
+    },
+    "version": 1
+}

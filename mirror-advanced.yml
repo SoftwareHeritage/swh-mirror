@@ -354,6 +354,8 @@ services:
     configs:
       - source: objstorage-rw
         target: /etc/softwareheritage/config.yml
+      - source: objstorage-winery-logconfig
+        target: /etc/softwareheritage/objstorage-winery-logconfig.json
     environment:
       PGCFG_0: swh-winery
       PGHOST_0: winery-db
@@ -398,6 +400,8 @@ services:
     configs:
       - source: objstorage-ro
         target: /etc/softwareheritage/config.yml
+      - source: objstorage-winery-logconfig
+        target: /etc/softwareheritage/objstorage-winery-logconfig.json
     environment:
       PGCFG_0: swh-winery
       PGHOST_0: winery-db
@@ -984,6 +988,8 @@ configs:
     file: conf/objstorage-winery-ro.yml
   objstorage-rw:
     file: conf/objstorage-winery-rw.yml
+  objstorage-winery-logconfig:
+    file: conf/objstorage-winery-logconfig.json
   nginx:
     file: conf/nginx.conf
   nginx-robots:
