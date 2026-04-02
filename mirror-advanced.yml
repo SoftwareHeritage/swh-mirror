@@ -274,6 +274,40 @@ services:
         uid: '1000'
         mode: 0400
 
+  winery-cleaner:
+    # Helper service for the Winery backend of the objstorage service
+    # (swh-objstorage). This backend process is in charge of deleting tables
+    # for packed shards from the winery-db.
+    #
+    <<: *swh-service
+    deploy:
+      placement:
+        # note: if using a local volume, you need to pin the objstorage
+        # instances on the node hosting the volume, eg. the manager, otherwise,
+        # if using a remote/distributed objstorage backend (seaweedfs, cloud,
+        # etc.) you want to remove this placement constraint
+        constraints:
+          - node.labels.org.softwareheritage.mirror.volumes.objstorage == true
+    volumes:
+      - "objstorage:/srv/softwareheritage/winery:rw,Z"
+    configs:
+      - source: objstorage-rw
+        target: /etc/softwareheritage/config.yml
+    depends_on:
+      - winery-db
+      - winery-packer
+    environment:
+      PGCFG_0: swh-winery
+      PGHOST_0: winery-db
+      PGUSER_0: swh
+      POSTGRES_DB_0: swh-winery
+    command: ["winery", "rw-shard-cleaner", "--min-mapped-hosts", "0"]
+    secrets:
+      - source: swh-mirror-winery-db-password
+        target: postgres-password-swh-winery
+        uid: '1000'
+        mode: 0400
+
   objstorage:
     # the swh-objstorage backend service; this example configuration uses a
     # Winery backend, see:

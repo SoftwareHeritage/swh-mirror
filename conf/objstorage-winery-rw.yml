@@ -57,7 +57,7 @@ objstorage:
     # Whether the packer should clean read-write shards from the database
     # immediately, or defer to the rw shard cleaner (default: true, the packer
     # cleans read-write shards immediately)
-    clean_immediately: true
+    clean_immediately: false
 
 
 client_max_size: 1073741824
