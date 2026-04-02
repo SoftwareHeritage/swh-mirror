@@ -63,6 +63,7 @@ case "$1" in
 
     "rpc-server")
         shift
+        declare -a GUNICORN_EXTRA_ARGS
         if [ -v POSTGRES_DB -a ! -v DB_SKIP_INIT ]; then
             swh_setup_db $1
         fi
@@ -94,6 +95,7 @@ case "$1" in
                 swh db init-admin -d service=$POSTGRES_DB objstorage:winery
                 swh db init -d service=$POSTGRES_DB objstorage:winery
                 swh db upgrade --non-interactive -d service=$POSTGRES_DB objstorage:winery
+                GUNICORN_EXTRA_ARGS=("--config=python:swh.objstorage.backends.winery.gunicorn")
             fi
         fi
 
@@ -107,6 +109,7 @@ case "$1" in
              --timeout ${GUNICORN_TIMEOUT:-3600} \
              --statsd-host=prometheus-statsd-exporter:9125 \
              --statsd-prefix=service.app.$1  \
+             "${GUNICORN_EXTRA_ARGS[@]}" \
              "swh.$1.api.server:make_app_from_configfile()"
         ;;
 
