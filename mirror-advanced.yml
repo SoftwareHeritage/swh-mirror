@@ -223,6 +223,28 @@ services:
         # etc.) you want to remove this placement constraint
         constraints:
           - node.labels.org.softwareheritage.mirror.volumes.objstorage == true
+    command:
+      - '--max_connections=400'  # check your cnx usage!!!
+      - '--max_worker_processes=32'
+      - '--max_parallel_workers=32'
+      - '--max_parallel_maintenance_workers=4'
+      # Memory related settings
+      - '--work_mem=128MB'
+      - '--maintenance_work_mem=1GB'
+      - '--shared_buffers=16GB'  # should be ~1/4 RAM
+      - '--effective_cache_size=32GB'  # should be ~1/2 RAM
+      # For sql_exporter
+      - '--shared_preload_libraries=pg_stat_statements'
+      # SSD settings
+      - '--random_page_cost=1.5'
+      - '--effective_io_concurrency=256'
+      # FS settings
+      - '--full_page_writes=off'
+      - '--wal_init_zero=off'
+      - '--wal_recycle=off'
+      # Checkpoint-related =settings
+      - '--min_wal_size=1GB'
+      - '--max_wal_size=8GB'
     environment:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password-swh-winery
       POSTGRES_USER: swh
