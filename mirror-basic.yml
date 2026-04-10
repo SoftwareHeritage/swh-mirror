@@ -852,11 +852,14 @@ configs:
     file: conf/kafka-ui.yml
 
 
-networks:
-  default:
-    driver: overlay
-    attachable: true
-    ipam:
-      driver: default
-      config:
-        - subnet: ${SWH_SUBNET:-10.1.0.0/16}
+# ** TO BE MODIFIED **
+# uncomment this if you need more the 254 containers (aka if you scale the
+# replayers and backend services significantly)
+# networks:
+#   default:
+#     driver: overlay
+#     attachable: true
+#     ipam:
+#       driver: default
+#       config:
+#         - subnet: ${SWH_SUBNET:-10.1.0.0/16}
