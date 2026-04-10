@@ -97,6 +97,13 @@ case "$1" in
                 swh db upgrade --non-interactive -d service=$POSTGRES_DB objstorage:winery
                 GUNICORN_EXTRA_ARGS=("--config=python:swh.objstorage.backends.winery.gunicorn"
 				     "--log-config-json=/etc/softwareheritage/objstorage-winery-logconfig.json")
+		if [ -z "$GUNICORN_THREADS" ] ; then
+		    GUNICORN_THREADS="1"
+		fi
+		if [ "$GUNICORN_THREADS" != "1" ]; then
+		    echo "GUNICORN_THREADS MUST BE 1 for winery; enforcing it"
+		    GUNICORN_THREADS="1"
+		fi
             fi
         fi
 
