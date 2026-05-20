@@ -28,16 +28,16 @@ objstorage:
     max_size: 100_000_000_000
     rw_idle_timeout: 300
 
-  # Optional throttler configuration, leave unset to disable throttling
+  # Throttler configuration
   throttler:
     # string: PostgreSQL connection string for the throttler database. Can be
     # shared with (and defaults to) the main database set in the `database`
     # section. Must be read-write even for readonly instances.
     db: postgresql:///?service=swh-winery
     # integer: max read bytes per second
-    max_read_bps: 100_000_000
+    max_read_bps: 100_000_000_000
     # integer: max write bytes per second
-    max_write_bps: 100_000_000
+    max_write_bps: 100_000_000_000
 
 
 client_max_size: 1073741824
