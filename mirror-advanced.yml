@@ -4,7 +4,7 @@
 
 
 x-swh-service: &swh-service
-  image: softwareheritage/mirror:${SWH_IMAGE_TAG:-20260410-120730}
+  image: softwareheritage/mirror:${SWH_IMAGE_TAG:-20260522-141925}
   env_file:
     - ./env/common.env
     - ./env/common-python.env
