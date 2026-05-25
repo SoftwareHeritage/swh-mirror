@@ -1,3 +1,5 @@
+ARG PYTHONVERSION="3.11"
+
 # build rage (for swh-alter)
 FROM rust:slim-bookworm AS build_rage
 RUN cargo install rage
@@ -6,8 +8,7 @@ RUN cargo install rage
 FROM golang:1.25 AS build_yq
 RUN CGO_ENABLED=0 go install -ldflags "-s" github.com/mikefarah/yq/v4@latest
 
-ARG pythonversion=3.11
-FROM python:${pythonversion:-3.11}-bookworm AS swh-builder
+FROM python:${PYTHONVERSION}-bookworm AS swh-builder
 LABEL maintainer="Software Heritage <sysop@softwareheritage.org>"
 ENV PROJECT_NAME=swh-base
 
@@ -100,7 +101,7 @@ RUN pip freeze > /srv/softwareheritage/pip-freeze.txt
 # MIRROR image
 ##################################
 
-FROM python:${pythonversion:-3.11}-slim-bookworm AS swh-mirror
+FROM python:${PYTHONVERSION}-slim-bookworm AS swh-mirror
 LABEL maintainer="Software Heritage <sysop@softwareheritage.org>"
 
 RUN export DEBIAN_FRONTEND=noninteractive && \
