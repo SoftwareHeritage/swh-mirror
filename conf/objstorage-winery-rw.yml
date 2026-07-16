@@ -25,14 +25,17 @@ objstorage:
     rw_idle_timeout: 300
 
   # Shards pool settings
-  shards_pool:
-    ## Settings for the directory shards pool
+  shards_pools:
+  - ## Settings for the directory shards pool
     # Shards are stored in `{base_directory}/{pool_name}`
     type: directory
 
     # **TO BE MODIFIED**
     base_directory: /srv/softwareheritage/winery
     pool_name: shards
+
+  # the name of the shards pool in which new shards are created
+  shards_active_pool: shards
 
   # Packer-related settings
   packer:

@@ -13,15 +13,17 @@ objstorage:
     # string: PostgreSQL application name for connections (unset by default)
     application_name: null
 
-  # Shards pool settings
-  shards_pool:
-    ## Settings for the directory shards pool
+  # Shards pools settings
+  shards_pools:
+  - ## Settings for the directory shards pool
     # Shards are stored in `{base_directory}/{pool_name}`
     type: directory
 
     # **TO BE MODIFIED**
     base_directory: /srv/softwareheritage/winery
     pool_name: shards
+
+  shards_active_pool: shards
 
   shards:
     # XXX these are actually not used for a RO objstorage but required in the code...
