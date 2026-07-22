@@ -3,6 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import atexit
 import logging
 from os import chdir, environ
 from pathlib import Path
@@ -161,6 +162,100 @@ def http_session(base_url):
     return session
 
 
+def cleanup_mirror_stack(keep_stack, stack_name, docker_stack, docker_client, conftmpl):
+    if not keep_stack:
+        LOGGER.info("Remove stack %s", stack_name)
+        docker_stack.remove()
+
+        for i in range(5):
+            stack_containers = docker_client.container.list(
+                filters={"label=com.docker.stack.namespace": stack_name}
+            )
+            if not stack_containers:
+                LOGGER.info("No more running containers (loop %s)", i)
+                break
+            try:
+                LOGGER.info(
+                    "Waiting for all %s containers of %s to be down (loop %s)",
+                    len(stack_containers),
+                    stack_name,
+                    i,
+                )
+                docker_client.container.wait(stack_containers)
+            except DockerException as e:
+                # We have a TOCTOU issue, so skip the error if some containers have already
+                # been stopped by the time we wait for them.
+                if "No such container" not in e.stderr:
+                    raise
+
+        LOGGER.info("Remove volumes of stack %s", stack_name)
+
+        stack_volumes = docker_client.volume.list(
+            filters={"label=com.docker.stack.namespace": stack_name}
+        )
+        retries = 0
+        while stack_volumes:
+            volume = stack_volumes.pop(0)
+            try:
+                volume.remove()
+                LOGGER.info("Removed volume %s", volume)
+            except DockerException:
+                if retries > 10:
+                    LOGGER.exception("Too many failures, giving up (volume=%s)", volume)
+                    break
+                LOGGER.warning("Failed to remove volume %s; retrying...", volume)
+                stack_volumes.append(volume)
+                retries += 1
+                sleep(1)
+
+        networks = docker_client.network.list(
+            filters={"label=com.docker.stack.namespace": stack_name}
+        )
+        for network in networks:
+            LOGGER.warning(
+                f"Enforce network {network.id} deletion "
+                "(it should have been deleted already)"
+            )
+            try:
+                docker_client.network.remove(network.id)
+            except DockerException as e:
+                if f"network {network.id} not found" not in e.stderr:
+                    LOGGER.error(
+                        f"Could not enforce network {network.id} "
+                        f"for the stack {stack_name} removal: {e.stderr}"
+                    )
+        # delete the tmp consumer groups
+        try:
+            cg_prefix = conftmpl["group_id"]
+            LOGGER.info(f"Deleting consumers groups starting with {cg_prefix}")
+            adm = AdminClient(
+                {
+                    "bootstrap.servers": conftmpl["broker"],
+                    "sasl.username": conftmpl["username"],
+                    "sasl.password": conftmpl["password"],
+                    "security.protocol": "sasl_ssl",
+                    "sasl.mechanism": "SCRAM-SHA-512",
+                }
+            )
+            cgroups = adm.list_consumer_groups()
+            while cgroups.running():
+                sleep(1)
+            cg_to_del = [
+                cg.group_id
+                for cg in cgroups.result().valid
+                if cg.group_id.startswith(cg_prefix)
+            ]
+            if cg_to_del:
+                cgdel = adm.delete_consumer_groups(cg_to_del)
+                while any(x.running() for x in cgdel.values()):
+                    sleep(1)
+                LOGGER.info(f"Deleted consumer groups {','.join(cg_to_del)}")
+
+        except Exception as exc:
+            LOGGER.warning(f"Failed to delete kafka consumer groups {cg_prefix}:")
+            LOGGER.warning(exc)
+
+
 @pytest.fixture(scope="module")
 def mirror_stack(
     request, docker_client, tmp_path_factory, compose_file, base_url, api_url
@@ -227,9 +322,23 @@ def mirror_stack(
         compose_file,
         image_tag,
     )
+
+    keep_stack = request.config.getoption("keep_stack")
+
     docker_stack = docker_client.stack.deploy(stack_name, compose_file)
     docker_stack._test_group_prefix = group_prefix  # used by get_expected_stats()
     docker_stack._test_conf_template = conftmpl
+
+    # ensure to not leak containers if fixture teardown does not get executed somehow
+    cleanup_func = atexit.register(
+        cleanup_mirror_stack,
+        keep_stack,
+        stack_name,
+        docker_stack,
+        docker_client,
+        conftmpl,
+    )
+
     try:
         got_exception = False
         # for the sake of early checks...
@@ -261,98 +370,8 @@ def mirror_stack(
                     )
                     LOGGER.warning(exc)
 
-        if not request.config.getoption("keep_stack"):
-            LOGGER.info("Remove stack %s", stack_name)
-            docker_stack.remove()
-
-            for i in range(5):
-                stack_containers = docker_client.container.list(
-                    filters={"label=com.docker.stack.namespace": stack_name}
-                )
-                if not stack_containers:
-                    LOGGER.info("No more running containers (loop %s)", i)
-                    break
-                try:
-                    LOGGER.info(
-                        "Waiting for all %s containers of %s to be down (loop %s)",
-                        len(stack_containers),
-                        stack_name,
-                        i,
-                    )
-                    docker_client.container.wait(stack_containers)
-                except DockerException as e:
-                    # We have a TOCTOU issue, so skip the error if some containers have already
-                    # been stopped by the time we wait for them.
-                    if "No such container" not in e.stderr:
-                        raise
-
-            LOGGER.info("Remove volumes of stack %s", stack_name)
-
-            stack_volumes = docker_client.volume.list(
-                filters={"label=com.docker.stack.namespace": stack_name}
-            )
-            retries = 0
-            while stack_volumes:
-                volume = stack_volumes.pop(0)
-                try:
-                    volume.remove()
-                    LOGGER.info("Removed volume %s", volume)
-                except DockerException:
-                    if retries > 10:
-                        LOGGER.exception(
-                            "Too many failures, giving up (volume=%s)", volume
-                        )
-                        break
-                    LOGGER.warning("Failed to remove volume %s; retrying...", volume)
-                    stack_volumes.append(volume)
-                    retries += 1
-                    sleep(1)
-
-            networks = docker_client.network.list(
-                filters={"label=com.docker.stack.namespace": stack_name}
-            )
-            for network in networks:
-                LOGGER.warning(
-                    f"Enforce network {network.id} deletion "
-                    "(it should have been deleted already)"
-                )
-                try:
-                    docker_client.network.remove(network.id)
-                except DockerException as e:
-                    if f"network {network.id} not found" not in e.stderr:
-                        LOGGER.error(
-                            f"Could not enforce network {network.id} "
-                            f"for the stack {stack_name} removal: {e.stderr}"
-                        )
-        # delete the tmp consumer groups
-        try:
-            cg_prefix = conftmpl["group_id"]
-            LOGGER.info(f"Deleting consumers groups starting with {cg_prefix}")
-            adm = AdminClient(
-                {
-                    "bootstrap.servers": conftmpl["broker"],
-                    "sasl.username": conftmpl["username"],
-                    "sasl.password": conftmpl["password"],
-                    "security.protocol": "sasl_ssl",
-                    "sasl.mechanism": "SCRAM-SHA-512",
-                }
-            )
-            cgroups = adm.list_consumer_groups()
-            while cgroups.running():
-                sleep(1)
-            cg_to_del = [
-                cg.group_id
-                for cg in cgroups.result().valid
-                if cg.group_id.startswith(cg_prefix)
-            ]
-            if cg_to_del:
-                cgdel = adm.delete_consumer_groups(cg_to_del)
-                while any(x.running() for x in cgdel.values()):
-                    sleep(1)
-                LOGGER.info(f"Deleted consumer groups {','.join(cg_to_del)}")
-
-        except Exception as exc:
-            LOGGER.warning(f"Failed to delete kafka consumer groups {cg_prefix}:")
-            LOGGER.warning(exc)
-
+        atexit.unregister(cleanup_func)
+        cleanup_mirror_stack(
+            keep_stack, stack_name, docker_stack, docker_client, conftmpl
+        )
         chdir(cwd)
