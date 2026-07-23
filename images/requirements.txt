@@ -1,4 +1,4 @@
-swh-alter
+swh-alter >= 1.5.0
 swh-core[logging,db,http]
 swh-model[cli]
 swh-counters
