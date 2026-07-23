@@ -1,6 +1,0 @@
-# List of extra dependencies, e.g. to build an image with a package 
-# from a given development branch or the current head
-#
-#swh-core @ git+https://gitlab.softwareheritage.org/swh/devel/swh-core.git
-#swh-storage @ git+https://gitlab.softwareheritage.org/douardda/swh-storage@fix_masking_db_scaffolding
-

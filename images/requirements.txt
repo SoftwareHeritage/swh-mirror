@@ -7,7 +7,7 @@ swh-graphql
 swh-indexer
 swh-journal
 swh-storage[journal]
-swh-objstorage[azure,libcloud] >= 7.1.0
+swh-objstorage[azure,libcloud] >= 7.2.0
 swh-objstorage-replayer
 swh-scheduler[journal]
 swh-scrubber

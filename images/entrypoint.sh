@@ -94,6 +94,7 @@ case "$1" in
                 wait_pgsql
                 swh db init-admin -d service=$POSTGRES_DB objstorage:winery
                 swh db init -d service=$POSTGRES_DB objstorage:winery
+		swh objstorage winery prepare-upgrade --assume-yes
                 swh db upgrade --non-interactive -d service=$POSTGRES_DB objstorage:winery
                 GUNICORN_EXTRA_ARGS=("--config=python:swh.objstorage.backends.winery.gunicorn"
 				     "--log-config-json=/etc/softwareheritage/objstorage-winery-logconfig.json")
