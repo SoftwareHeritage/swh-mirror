@@ -5,7 +5,7 @@
 # !! WARNING!! This setup is NOT recommended for a production deployment.
 
 x-swh-service: &swh-service
-  image: softwareheritage/mirror:${SWH_IMAGE_TAG:-20260723-141539}
+  image: softwareheritage/mirror:${SWH_IMAGE_TAG:-20261007-144708}
   env_file:
     - ./env/common.env
     - ./env/common-python.env
