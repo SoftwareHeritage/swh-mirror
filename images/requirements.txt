@@ -5,7 +5,7 @@ swh-counters
 swh-deposit[server]
 swh-graphql
 swh-indexer
-swh-journal
+swh-journal >= 3.0.0
 swh-storage[journal]
 swh-objstorage[azure,libcloud] >= 7.2.0
 swh-objstorage-replayer
