@@ -4,10 +4,6 @@ ARG PYTHONVERSION="3.11"
 FROM rust:slim-bookworm AS build_rage
 RUN cargo install rage
 
-# build yq (stolen from https://github.com/mikefarah/yq/blob/master/Dockerfile)
-FROM golang:1.27 AS build_yq
-RUN CGO_ENABLED=0 go install -ldflags "-s" github.com/mikefarah/yq/v4@latest
-
 FROM python:${PYTHONVERSION}-bookworm AS swh-builder
 LABEL maintainer="Software Heritage <sysop@softwareheritage.org>"
 ENV PROJECT_NAME=swh-base
@@ -141,6 +137,11 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
   apt-get clean && \
   rm -rf /var/lib/apt/lists/*
 
+# Install yq
+ARG yq_version=4.54.1
+RUN curl -LO https://github.com/mikefarah/yq/releases/download/v${yq_version}/yq_linux_amd64 && \
+  chmod +x yq_linux_amd64 && mv yq_linux_amd64 /usr/local/bin/yq
+
 ENV SWH_CONFIG_FILENAME=/etc/softwareheritage/config.yml
 ENV LC_ALL=C.UTF-8
 ENV PATH="/srv/softwareheritage/venv/bin:${PATH}"
@@ -154,8 +155,6 @@ USER swh
 COPY --from=swh-builder /srv /srv
 # Install rage (for swh-alter)
 COPY --from=build_rage /usr/local/cargo/bin/rage /usr/local/cargo/bin/rage-keygen /usr/local/bin
-# Install yq
-COPY --from=build_yq /go/bin/yq /usr/local/bin
 
 ARG SWH_VER
 ENV SWH_VER=${SWH_VER}
